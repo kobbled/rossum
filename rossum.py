@@ -59,6 +59,7 @@ ROBOT_INI_NAME='robot.ini'
 MANIFEST_VERSION=1
 MANIFEST_NAME='package.json'
 
+DEFAULT_CORE_VERSION='V7.70-1'
 
 
 
@@ -99,6 +100,9 @@ def main():
         help='Be quiet (only warnings and errors will be shown)')
     #parser.add_argument('-b', '--create-build', action='store_true',
     #    dest='create_build', help="Create build dir if it doesn't exist")
+    parser.add_argument('-c', '--core', type=str, dest='core_version',
+        metavar='ID', default=DEFAULT_CORE_VERSION, help="Version of "
+        "the core files used when translating (default: %(default)s)")
     parser.add_argument('-d', '--dry-run', action='store_true', dest='dry_run',
         help='Do everything except writing to Makefile')
     parser.add_argument('--ktrans', type=str, dest='ktrans', metavar='PATH',
@@ -224,7 +228,8 @@ def main():
 
 
     # notify user of config
-    logger.info("ktrans: {0}".format(ktrans_path))
+    logger.info("ktrans location: {0}".format(ktrans_path))
+    logger.info("Using system core version default: {0}".format(args.core_version))
     logger.info("Build configuration:")
     logger.info("  source dir: {0}".format(source_dir))
     logger.info("  build dir : {0}".format(build_dir))
@@ -253,7 +258,8 @@ def main():
 
     # finally: generate a Makefile for all discovered pkgs and the
     #          various bits of configuration data we collected
-    mk_src = gen_makefile(pkg_dirs, pkgs, source_dir, build_dir, ktrans_path, robot_ini_loc)
+    mk_src = gen_makefile(pkg_dirs, pkgs, source_dir, build_dir,
+                ktrans_path, args.core_version, robot_ini_loc)
 
 
     if args.dry_run:
@@ -372,17 +378,18 @@ BUILD_DIR:={build_dir}
 #INSTALL_DIR:=
 
 CC:={ktrans_path}
-SUPPORT_VER?=V7.70-1
+SUPPORT_VER?={core_version}
 ROBOT_INI:={robot_ini_loc}
 CFLAGS:=/ver $(SUPPORT_VER) /config $(ROBOT_INI)
 """
 
 
 
-def gen_mk_prefix(source_dir, build_dir, ktrans_path, robot_ini_loc):
+def gen_mk_prefix(source_dir, build_dir, ktrans_path, core_version, robot_ini_loc):
     return mk_prefix.format(
         source_dir=source_dir,
         build_dir=build_dir,
+        core_version=core_version,
         ktrans_path=ktrans_path,
         robot_ini_loc=robot_ini_loc)
 
@@ -548,10 +555,10 @@ def gen_makefile_section(pkg):
     return mk_sec
 
 
-def gen_makefile(pkg_dirs, pkgs, source_dir, build_dir, ktrans_path, robot_ini):
+def gen_makefile(pkg_dirs, pkgs, source_dir, build_dir, ktrans_path, core_version, robot_ini):
 
     res  = gen_mk_header(pkg_dirs) + '\n\n'
-    res += gen_mk_prefix(source_dir, build_dir, ktrans_path, robot_ini)
+    res += gen_mk_prefix(source_dir, build_dir, ktrans_path, core_version, robot_ini)
     res += "\n\n"
     res += gen_mk_global_tgts(pkgs)
     res += "\n\n"

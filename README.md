@@ -58,6 +58,8 @@ optional arguments:
   -h, --help            show this help message and exit
   -v, --verbose         Be verbose
   -q, --quiet           Be quiet (only warnings and errors will be shown)
+  -c, --core            Version of the core files used when translating
+                        (default: V7.70-1)
   -d, --dry-run         Do everything except writing to Makefile
   --ktrans PATH         Location of ktrans (default: auto-detect)
   -n, --no-env          Do not search the KPKG_PATH, even if it is set
@@ -133,18 +135,18 @@ to re-save the file(s) that include(s) the header.
 This will be corrected in a future version of `rossum`.
 
 #### How do I translate my sources for a different core version?
-The `Makefile`s by default select the `V7.70-1` version of the core files when
-executing `ktrans`. This can be overridden when invoking `make`, by setting the
-`SUPPORT_VER` environment variable. To build for `V8.30-1` for example, use:
+`rossum` by default will configure the `Makefile` to use the `V7.70-1` version
+of the system core files. This can be changed both at generation time as well
+as when invoking `make`. Use the `--core` command line option for setting a
+default that will persist as long as the `Makefile` remains unchanged. For a
+temporary override, simply set the `SUPPORT_VER` environment variable when
+invoking `make`. To build for `V8.30-1` for example, use:
 
 ```
 make SUPPORT_VER=V8.30-1
 ```
 
 See the output of `ktrans /?` for a list of supported core versions.
-
-Future versions of `rossum` will probably support overriding the default core
-version at generation time.
 
 #### I don't want to open-source my Karel projects, can I still use this?
 Of course: you are not required to open-source anything. The licenses stated
