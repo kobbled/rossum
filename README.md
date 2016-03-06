@@ -170,8 +170,8 @@ is on the `TODO.md` list though.
 
 ## Disclaimer
 
-Roboguide is a product of Fanuc America Corporation. The author of `rossum` is
-not affiliated with Fanuc in any way.
+WinOLPC, OlpcPRO and Roboguide are products of Fanuc America Corporation. The
+author of `rossum` is not affiliated with Fanuc in any way.
 
 
 
