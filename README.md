@@ -1,34 +1,28 @@
 # rossum
 v0.0.5
 
-This is `rossum`, a cmake-like Makefile generator for Fanuc Robotics (Karel)
+This is `rossum`, a cmake-like `Makefile` generator for Fanuc Robotics (Karel)
 projects.
 
 
 ## Overview
 
-This tool works around one of `ktrans.exe`'s more serious limitations:
-supporting only a single, global include directory (really only the *current
-working directory*). It does this by introducing the concept of a *workspace*
-with *source packages* and by explicitly supporting out-of-source builds.
-Auto-generated `Makefile`s take care of resolving build-time dependencies by
-copying files to the right locations whenever - and *wherever* - they are
-needed.
-
-As a side-effect, `rossum` makes the creation and distribution of re-usable
-libraries for Karel much more convenient.
+This tool introduces a package based workflow for Karel development: packages
+are directories that contain a marker file (a *manifest*) that contains some
+metadata describing the dependencies of that package and any translatable
+targets. Detection of packages and generation of the `Makefile` is done once
+at configuration time, relying on `make`'s dependency resolution to build
+all targets in the correct order.
 
 
 ## Requirements
 
-`rossum` is written in Python 2, so naturally it needs a Python 2 installation.
+`rossum` is written in Python 2, so naturally it needs a Python 2 install.
 
 In addition, the generated `Makefile`s depend on a version of GNU Make being
-available and a Win32 port of the `busybox` utilities.
-
-The author uses GNU Make 3.80 from [unxutils][] (be sure to get the version
-distributed in `UnxUpdates.zip`), and [busybox-w32][]. Both are stand-alone
-executables with no additional dependencies.
+available and on [ktransw][]. The author uses GNU Make 3.80 from [unxutils][]
+(be sure to get the version distributed in `UnxUpdates.zip`). This is a
+stand-alone executable with no additional dependencies.
 
 
 ## Installation
@@ -37,18 +31,22 @@ Clone this repository to your machine and add the directory containing
 `rossum.py` and `rossum.cmd` to your `PATH`. Command sessions opened after
 setting up the `PATH` should be able to successfully run `rossum` from anywhere.
 
-For maximum convenience, make sure that `make.exe` and `busybox.exe` are also
-on the `PATH`. An alternative would be to copy those executables to the build
-directory of the workspace (the one containing the generated `Makefile`). Note
-that this would have to be repeated each time a new build directory is created.
+For installation of `ktransw`, see [ktransw][].
+
+For maximum convenience, make sure that `make.exe` and `ktransw.cmd` are also
+on the `PATH`. An alternative would be to copy `make.exe` to the build
+directory of the workspace (the one containing the generated `Makefile`) and
+to specify the path to `ktransw.cmd` as a command line argument to `rossum`.
+Note that this would have to be repeated each time a new build directory is
+created.
 
 
 ## Usage
 
 ```
-usage: rossum.py [-h] [-v] [-q] [-d] [--ktrans PATH] [-n] [-p PATH] [-r INI]
-                 [-w]
-                 SRC [BUILD]
+usage: rossum [-h] [-v] [-q] [-c ID] [-d] [--ktrans PATH] [--ktransw PATH]
+              [-n] [-p PATH] [-r INI] [-w]
+              SRC [BUILD]
 
 positional arguments:
   SRC                   Main directory with packages to build
@@ -61,7 +59,9 @@ optional arguments:
   -c, --core            Version of the core files used when translating
                         (default: V7.70-1)
   -d, --dry-run         Do everything except writing to Makefile
-  --ktrans PATH         Location of ktrans (default: auto-detect)
+  --ktrans              Location of ktrans (default: auto-detect)
+  --ktransw             Location of ktransw (default: assume it's on the
+                        Windows PATH)
   -n, --no-env          Do not search the KPKG_PATH, even if it is set
   -p, --pkg-dir         Additional paths to search for packages (multiple
                         allowed)
@@ -177,6 +177,6 @@ author of `rossum` is not affiliated with Fanuc in any way.
 
 
 
+[ktransw]: https://github.com/gavanderhoorn/ktransw_py
 [rossum_example_ws]: https://github.com/gavanderhoorn/rossum_example_ws
 [unxutils]: http://unxutils.sourceforge.net
-[busybox-w32]: http://frippery.org/busybox
