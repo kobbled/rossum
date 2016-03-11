@@ -485,7 +485,8 @@ def gen_mk_proj_vars(pkg):
 ### per source file target
 
 tmpl_src_recipe = """$(BUILD_DIR)/{fname}.pc: $({project}_DIR)/src/{fname}.kl
-\t$(SC)$(CC) $({project}_INCLUDE_FLAGS) $< $@ $(CFLAGS) && echo.
+\t$(SC)echo Building -- $(notdir $@)
+\t$(SC)$(CC) -q $({project}_INCLUDE_FLAGS) $< $@ $(CFLAGS)
 """
 
 
