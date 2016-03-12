@@ -257,6 +257,25 @@ def main():
         logger.info("  {0}".format(pkg.manifest.name))
 
 
+    # make sure all dependencies are present
+    logger.debug("Check dependencies")
+    known_pkgs = [p.manifest.name for p in pkgs]
+    for pkg in pkgs:
+        logger.debug("Checking {0}, deps: {1}".format(
+            pkg.manifest.name,
+            ', '.join(pkg.manifest.depends) if len(pkg.manifest.depends) else 'none'))
+
+        missing = set(pkg.manifest.depends).difference(known_pkgs)
+        if len(missing) > 0:
+            logger.fatal("Package {0} is missing dependencies: {1}. Cannot "
+                "continue".format(pkg.manifest.name, ', '.join(missing)))
+            # TODO: find appropriate exit code
+            sys.exit(_OS_EX_DATAERR)
+        else:
+            logger.debug("All dependencies satisfied")
+
+
+
     ############################################################################
     #
     # Generation
