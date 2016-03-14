@@ -97,6 +97,8 @@ def main():
     parser = argparse.ArgumentParser(prog='rossum')
     parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
         help='Be verbose')
+    parser.add_argument('-V', '--version', action='version',
+        version='%(prog)s {0}'.format(ROSSUM_VERSION))
     parser.add_argument('-q', '--quiet', action='store_true', dest='quiet',
         help='Be quiet (only warnings and errors will be shown)')
     #parser.add_argument('-b', '--create-build', action='store_true',
