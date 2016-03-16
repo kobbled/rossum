@@ -168,24 +168,6 @@ def main():
     source_dir  = os.path.abspath(args.src_dir)
     extra_paths = [os.path.abspath(p) for p in args.extra_paths]
 
-    # for 'robot.ini', handle two cases:
-    #  1) relative: look for that name in SOURCE DIR
-    #  2) absolute: accept as-is
-    if os.path.isabs(args.robot_ini):
-        robot_ini_loc = args.robot_ini
-        logger.debug("Using absolute path to (replacement) {0}: {1}".format(
-            ROBOT_INI_NAME, robot_ini_loc))
-    else:
-        robot_ini_loc = os.path.join(source_dir, args.robot_ini)
-        logger.debug("Expecting (replacement) {0} at: {1}".format(
-            ROBOT_INI_NAME, robot_ini_loc))
-
-    # check that it actually exists
-    if not os.path.exists(robot_ini_loc):
-        logger.fatal("The file '{0}' does not exist, and no alternative "
-            "given, aborting.".format(robot_ini_loc))
-        sys.exit(_OS_EX_DATAERR)
-
 
     # make sure that source dir exists
     if not os.path.exists(source_dir):
@@ -206,6 +188,25 @@ def main():
         logger.fatal("Directory '{0}' does not exist (and not creating it), "
             "aborting".format(build_dir))
         # TODO: find appropriate exit code
+        sys.exit(_OS_EX_DATAERR)
+
+
+    # for 'robot.ini', handle two cases:
+    #  1) relative: look for that name in SOURCE DIR
+    #  2) absolute: accept as-is
+    if os.path.isabs(args.robot_ini):
+        robot_ini_loc = args.robot_ini
+        logger.debug("Using absolute path to (replacement) {0}: {1}".format(
+            ROBOT_INI_NAME, robot_ini_loc))
+    else:
+        robot_ini_loc = os.path.join(source_dir, args.robot_ini)
+        logger.debug("Expecting (replacement) {0} at: {1}".format(
+            ROBOT_INI_NAME, robot_ini_loc))
+
+    # check that it actually exists
+    if not os.path.exists(robot_ini_loc):
+        logger.fatal("The file '{0}' does not exist, and no alternative "
+            "given, aborting.".format(robot_ini_loc))
         sys.exit(_OS_EX_DATAERR)
 
 
