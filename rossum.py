@@ -286,7 +286,7 @@ def main():
             # TODO: find appropriate exit code
             sys.exit(_OS_EX_DATAERR)
         else:
-            logger.debug("All dependencies satisfied")
+            logger.debug("    satisfied")
 
 
 
@@ -545,7 +545,9 @@ def gen_mk_proj_bin_tgts(pkg):
 tmpl_proj_tgts = """{project}_clean:
 \t$(SC)del /q /f $(subst /,\,$({project}_OBJS)) 2>nul
 
-{project}_pcode: $(addsuffix _pcode,$({project}_DEPENDENCIES)) $({project}_OBJS)
+{project}_pcode: $(addsuffix _pcode,$({project}_DEPENDENCIES)) {project}_only
+
+{project}_only: $({project}_OBJS)
 """
 
 
