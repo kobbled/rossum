@@ -1,5 +1,5 @@
 # rossum
-v0.0.9
+v0.0.10
 
 This is `rossum`, a cmake-like `Makefile` generator for Fanuc Robotics (Karel)
 projects.
@@ -47,9 +47,14 @@ See [hhpywin][] for information on how to install Python on Windows.
 ## Usage
 
 ```
-usage: rossum [-h] [-v] [-q] [-c ID] [-d] [--ktrans PATH] [--ktransw PATH]
-              [-n] [-p PATH] [-r INI] [-w]
+usage: rossum [-h] [-v] [-V] [-q] [-c ID] [-d] [--ktrans PATH]
+              [--ktransw PATH] [-n] [-p PATH] [-r INI] [-w]
               SRC [BUILD]
+
+Version 0.0.10
+
+A cmake-like Makefile generator for Fanuc Robotics (Karel) projects
+that supports out-of-source builds.
 
 positional arguments:
   SRC                   Main directory with packages to build
@@ -58,6 +63,7 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -v, --verbose         Be verbose
+  -V, --version         show program's version number and exit
   -q, --quiet           Be quiet (only warnings and errors will be shown)
   -c, --core            Version of the core files used when translating
                         (default: V7.70-1)
@@ -70,6 +76,11 @@ optional arguments:
                         allowed)
   -r, --robot-ini       Location of robot.ini (default: source dir)
   -w, --overwrite       Overwrite any Makefile that may exist in the build dir
+
+Usage example:
+
+  mkdir  C:\foo\bar\build
+  rossum C:\foo\bar\src
 ```
 
 
