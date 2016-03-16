@@ -30,6 +30,8 @@
 import os
 import sys
 #import yaml
+import json
+import fnmatch
 
 import collections
 
@@ -93,8 +95,17 @@ class Pkg(object):
 def main():
     import argparse
 
-    # parse command line opts
-    parser = argparse.ArgumentParser(prog='rossum')
+    description=("Version {0}\n\nA cmake-like Makefile generator for Fanuc "
+        "Robotics (Karel) projects\nthat supports out-of-source "
+        "builds.".format(ROSSUM_VERSION))
+
+    epilog=("Usage example:\n\n"
+        "  mkdir  C:\\foo\\bar\\build\n"
+        "  rossum C:\\foo\\bar\\src")
+
+    parser = argparse.ArgumentParser(prog='rossum', description=description,
+        epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter)
+
     parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
         help='Be verbose')
     parser.add_argument('-V', '--version', action='version',
@@ -235,14 +246,14 @@ def main():
     ktransw_path = args.ktransw or KTRANSW_BIN_NAME
 
     # notify user of config
-    logger.info("ktrans location : {0}".format(ktrans_path))
+    logger.info("ktrans location: {0}".format(ktrans_path))
     logger.info("ktransw location: {0}".format(ktransw_path))
-    logger.info("Using system core version default: {0}".format(args.core_version))
+    logger.info("Setting default system core version to: {0}".format(args.core_version))
     logger.info("Build configuration:")
     logger.info("  source dir: {0}".format(source_dir))
     logger.info("  build dir : {0}".format(build_dir))
     logger.info("  robot.ini : {0}".format(robot_ini_loc))
-    logger.info("Package search path (in order: src, args, env):")
+    logger.info("Paths searched for packages (in order: src, args, env):")
     for p in pkg_dirs:
         logger.info('  {0}'.format(p))
 
@@ -260,10 +271,10 @@ def main():
 
 
     # make sure all dependencies are present
-    logger.debug("Check dependencies")
+    logger.debug("Checking dependencies")
     known_pkgs = [p.manifest.name for p in pkgs]
     for pkg in pkgs:
-        logger.debug("Checking {0}, deps: {1}".format(
+        logger.debug("  {0} - deps: {1}".format(
             pkg.manifest.name,
             ', '.join(pkg.manifest.depends) if len(pkg.manifest.depends) else 'none'))
 
@@ -573,7 +584,6 @@ def gen_makefile(pkg_dirs, pkgs, source_dir, build_dir, ktrans_path, ktransw_pat
 
 
 def find_files_recur(top_dir, pattern):
-    import fnmatch
     matches = []
     for root, dirnames, filenames in os.walk(top_dir):
         for filename in fnmatch.filter(filenames, pattern):
@@ -586,11 +596,10 @@ def is_rossum_pkg(mfest):
 
 
 def parse_manifest(fpath):
-    import json
     with open(fpath, 'r') as f:
         mfest = json.load(f)
 
-    logger.debug("Loaded {0} in {1}".format(os.path.basename(fpath), os.path.dirname(fpath)))
+    logger.debug("Loaded {0} from {1}".format(os.path.basename(fpath), os.path.dirname(fpath)))
 
     # make sure this is not a file that happens to be called 'package.json'
     if not is_rossum_pkg(mfest):

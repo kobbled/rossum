@@ -41,6 +41,8 @@ to specify the path to `ktransw.cmd` as a command line argument to `rossum`.
 Note that this would have to be repeated each time a new build directory is
 created.
 
+See [hhpywin][] for information on how to install Python on Windows.
+
 
 ## Usage
 
@@ -181,3 +183,4 @@ author of `rossum` is not affiliated with Fanuc in any way.
 [ktransw]: https://github.com/gavanderhoorn/ktransw_py
 [rossum_example_ws]: https://github.com/gavanderhoorn/rossum_example_ws
 [unxutils]: http://unxutils.sourceforge.net
+[hhpywin]: http://docs.python-guide.org/en/latest/starting/install/win/
