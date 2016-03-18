@@ -39,7 +39,7 @@ import logging
 logger=None
 
 
-ROSSUM_VERSION='0.0.10'
+ROSSUM_VERSION='0.0.11'
 
 
 _OS_EX_USAGE=64
