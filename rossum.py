@@ -77,7 +77,7 @@ class InvalidManifestException(Exception):
 
 
 
-Manifest = collections.namedtuple('Manifest', 'name description version source includes depends')
+Manifest = collections.namedtuple('Manifest', 'name description version source tests includes depends')
 
 class Pkg(object):
     def __init__(self, location, manifest):
@@ -444,6 +444,8 @@ mk_global_tgts="""
 
 all: {proj_pcode_tgts}
 
+tests: {proj_test_tgts}
+
 clean: {proj_clean_tgts}
 """
 
@@ -452,18 +454,22 @@ def gen_mk_global_tgts(pkgs):
     phony_tgts = []
     pcode_tgts = []
     clean_tgts = []
+    test_tgts  = []
     for pkg in pkgs:
         pcode_tgts.append(pkg.manifest.name + '_pcode')
         clean_tgts.append(pkg.manifest.name + '_clean')
+        test_tgts.append(pkg.manifest.name + '_tests')
 
     phony_tgts.extend(pcode_tgts)
     phony_tgts.extend(clean_tgts)
+    phony_tgts.extend(test_tgts)
 
     phony_tgts = list(set(phony_tgts))
 
     return mk_global_tgts.format(
         phony_targets=' '.join(phony_tgts),
         proj_pcode_tgts=' '.join(pcode_tgts),
+        proj_test_tgts=' '.join(test_tgts),
         proj_clean_tgts=' '.join(clean_tgts))
 
 
@@ -486,11 +492,13 @@ tmpl_vars = """{project}_DIR:={proj_loc}
 {project}_INCLUDE_FLAGS=$(addprefix /I,$({project}_INCLUDE_DIRECTORIES))
 {project}_OBJS:={proj_objs}
 {project}_OBJS:=$(addprefix $(BUILD_DIR)/,$({project}_OBJS))
+{project}_test_OBJS:={proj_test_objs}
+{project}_test_OBJS:=$(addprefix $(BUILD_DIR)/,$({project}_test_OBJS))
 """
 
-def gen_obj_names(pkg):
+def gen_obj_names(srcs):
     objs = []
-    for src in pkg.manifest.source:
+    for src in srcs:
         fname, _ = os.path.splitext(os.path.basename(src))
         objs.append(fname + '.pc')
     return objs
@@ -502,14 +510,16 @@ def gen_mk_proj_vars(pkg):
     # and it's immediate dependencies
     inc_dirs.extend(['$({0}_INCLUDE_DIRECTORIES)'.format(dep) for dep in pkg.manifest.depends])
 
-    objs = gen_obj_names(pkg)
+    objs = gen_obj_names(pkg.manifest.source)
+    tobjs = gen_obj_names(pkg.manifest.tests)
 
     return tmpl_vars.format(
         project=pkg.manifest.name,
         proj_dependencies=' '.join(pkg.manifest.depends),
         proj_loc=pkg.location,
         proj_include_dirs=' '.join(inc_dirs),
-        proj_objs=' '.join(objs))
+        proj_objs=' '.join(objs),
+        proj_test_objs=' '.join(tobjs))
 
 
 
@@ -521,7 +531,6 @@ tmpl_src_recipe = """$(BUILD_DIR)/{fname}.pc: $({project}_DIR)/src/{fname}.kl
 \t$(SC)echo Building Karel program :: $(notdir $@)
 \t$(SC)$(CC) -q $({project}_INCLUDE_FLAGS) $< $@ $(CFLAGS)
 """
-
 
 def gen_mk_proj_bin_tgts(pkg):
     res = ""
@@ -536,6 +545,26 @@ def gen_mk_proj_bin_tgts(pkg):
 
 
 
+### per test file target
+
+tmpl_test_recipe = """$(BUILD_DIR)/{fname}.pc: $({project}_DIR)/src/{fname}.kl
+\t$(SC)echo Building Karel test    :: $(notdir $@)
+\t$(SC)$(CC) -q $({project}_INCLUDE_FLAGS) $< $@ $(CFLAGS)
+"""
+
+def gen_mk_proj_test_tgts(pkg):
+    res = ""
+    for src in pkg.manifest.tests:
+        fname, _ = os.path.splitext(os.path.basename(src))
+
+        res += tmpl_test_recipe.format(
+            project=pkg.manifest.name,
+            fname=fname)
+        res += '\n'
+    return res
+
+
+
 
 
 
@@ -543,9 +572,11 @@ def gen_mk_proj_bin_tgts(pkg):
 ### project specific targets
 
 tmpl_proj_tgts = """{project}_clean:
-\t$(SC)del /q /f $(subst /,\,$({project}_OBJS)) 2>nul
+\t$(SC)del /q /f $(subst /,\,$({project}_OBJS) $({project}_test_OBJS)) 2>nul
 
 {project}_pcode: $(addsuffix _pcode,$({project}_DEPENDENCIES)) {project}_only
+
+{project}_tests: $({project}_test_OBJS)
 
 {project}_only: $({project}_OBJS)
 """
@@ -564,6 +595,7 @@ def gen_mk_proj_tgts(pkg):
 def gen_makefile_section(pkg):
     mk_sec  = gen_mk_proj_vars(pkg) + '\n'
     mk_sec += gen_mk_proj_bin_tgts(pkg)
+    mk_sec += gen_mk_proj_test_tgts(pkg)
     mk_sec += gen_mk_proj_tgts(pkg)
 
     return mk_sec
@@ -619,6 +651,7 @@ def parse_manifest(fpath):
         description=mfest['description'],
         version=mfest['version'],
         source=mfest['source'],
+        tests=mfest['tests'] if 'tests' in mfest else [],
         includes=mfest['includes'],
         depends=mfest['depends'])
     return Pkg(location=os.path.dirname(fpath), manifest=manifest)
