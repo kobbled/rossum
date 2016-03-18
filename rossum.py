@@ -650,10 +650,10 @@ def parse_manifest(fpath):
         name=mfest['project'],
         description=mfest['description'],
         version=mfest['version'],
-        source=mfest['source'],
+        source=mfest['source'] if 'source' in mfest else [],
         tests=mfest['tests'] if 'tests' in mfest else [],
-        includes=mfest['includes'],
-        depends=mfest['depends'])
+        includes=mfest['includes'] if 'includes' in mfest else [],
+        depends=mfest['depends'] if 'depends' in mfest else [])
     return Pkg(location=os.path.dirname(fpath), manifest=manifest)
 
 
