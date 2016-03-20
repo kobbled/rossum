@@ -525,41 +525,39 @@ def gen_mk_proj_vars(pkg):
 
 
 
-### per source file target
 
-tmpl_src_recipe = """$(BUILD_DIR)/{fname}.pc: $({project}_DIR)/src/{fname}.kl
+
+### per source file target
+tmpl_src_recipe = """$(BUILD_DIR)/{oname}: $({project}_DIR)/{sname}
 \t$(SC)echo Building Karel program :: $(notdir $@)
 \t$(SC)$(CC) -q $({project}_INCLUDE_FLAGS) $< $@ $(CFLAGS)
 """
 
-def gen_mk_proj_bin_tgts(pkg):
-    res = ""
-    for src in pkg.manifest.source:
-        fname, _ = os.path.splitext(os.path.basename(src))
-
-        res += tmpl_src_recipe.format(
-            project=pkg.manifest.name,
-            fname=fname)
-        res += '\n'
-    return res
-
-
-
 ### per test file target
-
-tmpl_test_recipe = """$(BUILD_DIR)/{fname}.pc: $({project}_DIR)/src/{fname}.kl
+tmpl_test_recipe = """$(BUILD_DIR)/{oname}: $({project}_DIR)/{sname}
 \t$(SC)echo Building Karel test    :: $(notdir $@)
 \t$(SC)$(CC) -q $({project}_INCLUDE_FLAGS) $< $@ $(CFLAGS)
 """
 
+
+def gen_mk_proj_bin_tgt(pkg, kl_src, template):
+    fname, _ = os.path.splitext(os.path.basename(kl_src))
+    return template.format(
+        project=pkg.manifest.name,
+        oname=fname + '.pc',
+        sname=kl_src)
+
+def gen_mk_proj_bin_tgts(pkg):
+    res = ""
+    for src in pkg.manifest.source:
+        res += gen_mk_proj_bin_tgt(pkg, src, tmpl_src_recipe)
+        res += '\n'
+    return res
+
 def gen_mk_proj_test_tgts(pkg):
     res = ""
     for src in pkg.manifest.tests:
-        fname, _ = os.path.splitext(os.path.basename(src))
-
-        res += tmpl_test_recipe.format(
-            project=pkg.manifest.name,
-            fname=fname)
+        res += gen_mk_proj_bin_tgt(pkg, src, tmpl_test_recipe)
         res += '\n'
     return res
 
