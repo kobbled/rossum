@@ -25,6 +25,8 @@ available and on [ktransw][]. The author uses GNU Make 3.80 from [unxutils][]
 stand-alone executable with no additional dependencies. `ktransw` must be
 version 0.0.8 or newer.
 
+See the [ktransw][] documentation for additional requirements.
+
 
 ## Installation
 
