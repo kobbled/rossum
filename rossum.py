@@ -670,8 +670,8 @@ def find_pkgs(dirs):
         logger.debug("Searching in {0}".format(d))
         manifests_ = find_files_recur(d, MANIFEST_NAME)
         manifests.extend(manifests_)
-        logger.debug("Found {0} manifests in {1}".format(len(manifests_), d))
-    logger.debug("Found {0} manifests total".format(len(manifests)))
+        logger.debug("  found {0} manifest(s)".format(len(manifests_)))
+    logger.debug("Found {0} manifest(s) total".format(len(manifests)))
 
     pkgs = []
     for mfest in manifests:
