@@ -65,6 +65,7 @@ MANIFEST_NAME='package.json'
 
 DEFAULT_CORE_VERSION='V7.70-1'
 
+ROSSUM_IGNORE_NAME='ROSSUM_IGNORE'
 
 
 
@@ -254,7 +255,7 @@ def main():
     logger.info("  source dir: {0}".format(source_dir))
     logger.info("  build dir : {0}".format(build_dir))
     logger.info("  robot.ini : {0}".format(robot_ini_loc))
-    logger.info("Paths searched for packages (in order: src, args, env):")
+    logger.info("Paths searched for packages (in order: src, args, {0}):".format(ENV_PKG_PATH))
     for p in pkg_dirs:
         logger.info('  {0}'.format(p))
 
@@ -618,9 +619,17 @@ def gen_makefile(pkg_dirs, pkgs, source_dir, build_dir, ktrans_path, ktransw_pat
 
 def find_files_recur(top_dir, pattern):
     matches = []
-    for root, dirnames, filenames in os.walk(top_dir):
+    for root, dirnames, filenames in os.walk(top_dir, topdown=True):
+        # if we find an ignore file, don't go down into that subtree
+        if ROSSUM_IGNORE_NAME in filenames:
+            logger.debug("Ignoring {0} (found {1})".format(root, ROSSUM_IGNORE_NAME))
+            # discard any sub dirs os.walk(..) found in 'root'
+            dirnames[:] = []
+            continue
+
         for filename in fnmatch.filter(filenames, pattern):
             matches.append(os.path.join(root, filename))
+
     return matches
 
 
