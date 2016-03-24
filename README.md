@@ -142,14 +142,6 @@ be placed in the build directory that was used when generating the file.
 
 This may change in future versions (see `TODO.md`).
 
-#### I changed a header, but make claims there is 'nothing to do'
-Included headers are currently not listed as dependencies for the various binary
-targets in the generated `Makefile`. As such a change to a header will go
-unnoticed by `make`. The current work-around is to either `make clean all`, or
-to re-save the file(s) that include(s) the header.
-
-This will be corrected in a future version of `rossum`.
-
 #### How do I translate my sources for a different core version?
 `rossum` by default will configure the `Makefile` to use the `V7.70-1` version
 of the system core files. This can be changed both at generation time as well

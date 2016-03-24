@@ -21,6 +21,5 @@
   1. package manifest verification?
   1. check existence of source files?
   1. source file globbing?
-  1. `make depends` support?
   1. add make target to rerun rossum whenever manifests change
   1. see if yaml makes more sense for package manifests
