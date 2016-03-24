@@ -1,5 +1,5 @@
 # rossum
-v0.0.12
+v0.0.13
 
 This is `rossum`, a cmake-like `Makefile` generator for Fanuc Robotics (Karel)
 projects.
@@ -53,7 +53,7 @@ usage: rossum [-h] [-v] [-V] [-q] [-c ID] [-d] [--ktrans PATH]
               [--ktransw PATH] [-n] [-p PATH] [-r INI] [-w]
               SRC [BUILD]
 
-Version 0.0.12
+Version 0.0.13
 
 A cmake-like Makefile generator for Fanuc Robotics (Karel) projects
 that supports out-of-source builds.
