@@ -102,32 +102,10 @@ Yes, it only runs on Windows, actually.
 so depending on your project's requirements (is it Karel only? Do you need to
 translate TP programs, etc), yes, you still need Roboguide.
 
-#### This is not a solution, it looks more like a work around?
-Well, yes, true. That is also stated in the *Overview* section. `ktrans.exe` is
-developed by Fanuc, and I don't have any special access to it, nor to any
-other parts of Roboguide or related infrastructure. This means we'll have to
-make do with what we have.
-
-If you know of a better work-around (or even a real solution), please contact
-me.
-
-#### How about backwards compatibility with non-rossum users?
-There are two situations to consider: manually invoking `ktrans.exe` on the
-command line, and compiling Karel sources in Roboguide.
-
-As for Roboguide: it actually supports multiple include paths natively, so all
-that would be needed to be able to translate the sources from a
-rossum-compatible package would be to add the `$pkg_dir\include` directory to
-a workcell's *include path*. This is easily done by selecting the *Set Extra
-Includes* option from the *Cell Browser* context-menu. See the Roboguide help
-for more information.
-
-When not using Roboguide, just copy the directory *inside* the `$pkg_dir\include`
-directory to your project directory. Compilation should now work as usual.
-
 #### Does this work with just WinOLPC or OlpcPRO?
-Not at this time, but it should not be hard to add support. If you are willing
-to assist, please contact me.
+I haven't tested it explicitly, but it should work. Auto-detection of the
+location of `ktrans` will probably need some work. If you are willing to assist,
+please contact me.
 
 #### I pointed rossum to my Roboguide workcell directory, but it doesn't work
 `rossum` only recognises directories that contain a so called *manifest*: a
