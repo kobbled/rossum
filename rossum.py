@@ -495,6 +495,7 @@ tmpl_vars = """{project}_DIR:={proj_loc}
 {project}_OBJS:=$(addprefix $(BUILD_DIR)/,$({project}_OBJS))
 {project}_test_OBJS:={proj_test_objs}
 {project}_test_OBJS:=$(addprefix $(BUILD_DIR)/,$({project}_test_OBJS))
+
 """
 
 def gen_obj_names(srcs):
@@ -524,20 +525,33 @@ def gen_mk_proj_vars(pkg):
 
 
 
+### dependency includes
+tmpl_dep_includes = """-include $({project}_OBJS:.pc=.d) $({project}_test_OBJS:.pc=.d)
+"""
+
+
+def gen_mk_proj_dep_includes(pkg):
+    # don't generate the include statement if this package doesn't have
+    # any binary targets (header only library, fi)
+    if not (len(pkg.manifest.source) == 0 and len(pkg.manifest.tests) == 0):
+        return tmpl_dep_includes.format(project=pkg.manifest.name)
+    return ''
 
 
 
 
 ### per source file target
-tmpl_src_recipe = """$(BUILD_DIR)/{oname}: $({project}_DIR)/{sname}
+tmpl_src_recipe = """$(BUILD_DIR)/{oname_base}.pc: $({project}_DIR)/{sname}
 \t$(SC)echo Building Karel program :: $(notdir $@)
 \t$(SC)$(CC) -q $({project}_INCLUDE_FLAGS) $< $@ $(CFLAGS)
+\t$(SC)$(CC) -q -MM -MT $$(BUILD_DIR)/{oname_base}.pc -MF $(BUILD_DIR)/{oname_base}.d $({project}_INCLUDE_FLAGS) $< $(CFLAGS)
 """
 
 ### per test file target
-tmpl_test_recipe = """$(BUILD_DIR)/{oname}: $({project}_DIR)/{sname}
+tmpl_test_recipe = """$(BUILD_DIR)/{oname_base}.pc: $({project}_DIR)/{sname}
 \t$(SC)echo Building Karel test    :: $(notdir $@)
 \t$(SC)$(CC) -q $({project}_INCLUDE_FLAGS) $< $@ $(CFLAGS)
+\t$(SC)$(CC) -q -MM -MT $$(BUILD_DIR)/{oname_base}.pc -MF $(BUILD_DIR)/{oname_base}.d $({project}_INCLUDE_FLAGS) $< $(CFLAGS)
 """
 
 
@@ -545,7 +559,7 @@ def gen_mk_proj_bin_tgt(pkg, kl_src, template):
     fname, _ = os.path.splitext(os.path.basename(kl_src))
     return template.format(
         project=pkg.manifest.name,
-        oname=fname + '.pc',
+        oname_base=fname,
         sname=kl_src)
 
 def gen_mk_proj_bin_tgts(pkg):
@@ -572,6 +586,7 @@ def gen_mk_proj_test_tgts(pkg):
 
 tmpl_proj_tgts = """{project}_clean:
 \t$(SC)del /q /f $(subst /,\,$({project}_OBJS) $({project}_test_OBJS)) 2>nul
+\t$(SC)del /q /f $(subst /,\,$({project}_OBJS:.pc=.d) $({project}_test_OBJS:.pc=.d)) 2>nul
 
 {project}_pcode: $(addsuffix _pcode,$({project}_DEPENDENCIES)) {project}_only
 
@@ -592,7 +607,8 @@ def gen_mk_proj_tgts(pkg):
 
 
 def gen_makefile_section(pkg):
-    mk_sec  = gen_mk_proj_vars(pkg) + '\n'
+    mk_sec  = gen_mk_proj_vars(pkg)
+    mk_sec += gen_mk_proj_dep_includes(pkg) + '\n'
     mk_sec += gen_mk_proj_bin_tgts(pkg)
     mk_sec += gen_mk_proj_test_tgts(pkg)
     mk_sec += gen_mk_proj_tgts(pkg)
