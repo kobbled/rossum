@@ -229,8 +229,11 @@ def main():
 
         try:
             ktrans_path = find_ktrans()
-        except Exception, e:
-            logger.fatal(e)
+        except MissingKtransException as mke:
+            logger.fatal("Aborting: {0}".format(mke))
+            sys.exit(_OS_EX_DATAERR)
+        except Exception as e:
+            logger.fatal("Aborting: {0} (unhandled, please report)".format(e))
             sys.exit(_OS_EX_DATAERR)
     # or if user provided its location
     else:
@@ -693,7 +696,7 @@ def find_pkgs(dirs):
     for mfest in manifests:
         try:
             pkgs.append(parse_manifest(mfest))
-        except Exception, e:
+        except Exception as e:
             mfest_loc = os.path.join(os.path.split(os.path.dirname(mfest))[1], os.path.basename(mfest))
             logger.warn("Error parsing manifest in {0}: {1}.".format(mfest_loc, e))
 
@@ -727,7 +730,9 @@ def find_ktrans(kbin_name=KTRANS_BIN_NAME, search_locs=KTRANS_SEARCH_PATH):
             logger.debug("Found {0} in {1} via Windows registry".format(kbin_name, ktrans_loc))
             return ktrans_path
 
-    except ImportError, ime:
+    except WindowsError as we:
+        logger.debug("Couldn't find FANUC registry key(s), trying other methods")
+    except ImportError as ime:
         logger.debug("Couldn't access Windows registry, trying other methods")
 
     # no windows registry, try looking in the file system
