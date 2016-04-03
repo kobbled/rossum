@@ -23,7 +23,7 @@ In addition, the generated `Makefile`s depend on a version of GNU Make being
 available and on [ktransw][]. The author uses GNU Make 3.80 from [unxutils][]
 (be sure to get the version distributed in `UnxUpdates.zip`). This is a
 stand-alone executable with no additional dependencies. `ktransw` must be
-version 0.1.0 or newer.
+version 0.1.1 or newer.
 
 See the [ktransw][] documentation for additional requirements.
 

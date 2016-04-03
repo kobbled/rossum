@@ -547,14 +547,14 @@ def gen_mk_proj_dep_includes(pkg):
 tmpl_src_recipe = """$(BUILD_DIR)/{oname_base}.pc: $({project}_DIR)/{sname}
 \t$(SC)echo Building Karel program :: $(notdir $@)
 \t$(SC)$(CC) -q $({project}_INCLUDE_FLAGS) $< $@ $(CFLAGS)
-\t$(SC)$(CC) -q -MM -MT $$(BUILD_DIR)/{oname_base}.pc -MF $(BUILD_DIR)/{oname_base}.d $({project}_INCLUDE_FLAGS) $< $(CFLAGS)
+\t$(SC)$(CC) -q -MM -MP -MT $$(BUILD_DIR)/{oname_base}.pc -MF $(BUILD_DIR)/{oname_base}.d $({project}_INCLUDE_FLAGS) $< $(CFLAGS)
 """
 
 ### per test file target
 tmpl_test_recipe = """$(BUILD_DIR)/{oname_base}.pc: $({project}_DIR)/{sname}
 \t$(SC)echo Building Karel test    :: $(notdir $@)
 \t$(SC)$(CC) -q $({project}_INCLUDE_FLAGS) $< $@ $(CFLAGS)
-\t$(SC)$(CC) -q -MM -MT $$(BUILD_DIR)/{oname_base}.pc -MF $(BUILD_DIR)/{oname_base}.d $({project}_INCLUDE_FLAGS) $< $(CFLAGS)
+\t$(SC)$(CC) -q -MM -MP -MT $$(BUILD_DIR)/{oname_base}.pc -MF $(BUILD_DIR)/{oname_base}.d $({project}_INCLUDE_FLAGS) $< $(CFLAGS)
 """
 
 
