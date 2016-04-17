@@ -271,7 +271,7 @@ def main():
     pkgs = find_pkgs(pkg_dirs)
     logger.info("Found {0} package(s):".format(len(pkgs)))
     for pkg in pkgs:
-        logger.info("  {0}".format(pkg.manifest.name))
+        logger.info("  {0} (v{1})".format(pkg.manifest.name, pkg.manifest.version))
 
 
     # make sure all dependencies are present
