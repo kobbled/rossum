@@ -22,7 +22,6 @@
 #  - Python 2.7.x
 #  - GNU Make 3.80+ (http://unxutils.sourceforge.net/)
 #     only 'make.exe' from the 'UnxUpdates.zip' archive is needed
-#  - busybox-w32 (http://frippery.org/busybox/)
 #
 
 

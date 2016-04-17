@@ -6,7 +6,6 @@
   1. use empy for templates (but it's not in the Python Standard Library)
   1. add checks for Makefile dependencies: either on the path, or in the cwd:
     - `make.exe`
-    - `busybox.exe`
     - `maketp.exe`
   1. add some sort of deployment target (ftp to controller)
   1. maybe make distinction between 'run depends' and 'build depends'?
