@@ -101,6 +101,7 @@ def main():
 
     epilog=("Usage example:\n\n"
         "  mkdir  C:\\foo\\bar\\build\n"
+        "  cd C:\\foo\\bar\\build\n"
         "  rossum C:\\foo\\bar\\src")
 
     parser = argparse.ArgumentParser(prog='rossum', description=description,
