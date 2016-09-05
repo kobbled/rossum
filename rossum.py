@@ -20,15 +20,15 @@
 #
 # Prerequisites:
 #  - Python 2.7.x
-#  - GNU Make 3.80+ (http://unxutils.sourceforge.net/)
-#     only 'make.exe' from the 'UnxUpdates.zip' archive is needed
+#  - ninja build system (https://ninja-build.org)
+#  - EmPy
 #
 
 
-#import em
+import em
+import datetime
 import os
 import sys
-#import yaml
 import json
 import fnmatch
 
@@ -44,9 +44,17 @@ ROSSUM_VERSION='0.0.14'
 _OS_EX_USAGE=64
 _OS_EX_DATAERR=65
 
+KL_SUFFIX = 'kl'
+PCODE_SUFFIX = 'pc'
 
 ENV_PKG_PATH='ROSSUM_PKG_PATH'
-MAKEFILE_NAME='Makefile'
+BUILD_FILE_NAME='build.ninja'
+BUILD_FILE_TEMPLATE_NAME='build.ninja.em'
+
+FANUC_SEARCH_PATH = [
+    'C:/Program Files/Fanuc',
+    'C:/Program Files (x86)/Fanuc'
+]
 
 KTRANS_BIN_NAME='ktrans.exe'
 KTRANS_SEARCH_PATH = [
@@ -74,15 +82,53 @@ class MissingKtransException(Exception):
 class InvalidManifestException(Exception):
     pass
 
+class MissingPkgDependency(Exception):
+    pass
 
 
+KtransSupportDirInfo = collections.namedtuple('KtransSupportDirInfo', 'path version_string')
 
-Manifest = collections.namedtuple('Manifest', 'name description version source tests includes depends')
+KtransInfo = collections.namedtuple('KtransInfo', 'path support')
 
-class Pkg(object):
-    def __init__(self, location, manifest):
-        self.location = location
-        self.manifest = manifest
+KtransWInfo = collections.namedtuple('KtransWInfo', 'path')
+
+KtransRobotIniInfo = collections.namedtuple('KtransRobotIniInfo', 'path')
+
+# In-memory representation of raw data from a parsed rossum manifest
+RossumManifest = collections.namedtuple('RossumManifest',
+    'depends '
+    'description '
+    'includes '
+    'name '
+    'source '
+    'tests '
+    'version'
+)
+
+# a rossum package contains both raw, uninterpreted data (the manifest), as
+# well as derived and processed information (dependencies, include dirs, its
+# location and the objects to be build)
+RossumPackage = collections.namedtuple('RossumPackage',
+    'dependencies ' # list of pkg names that this pkg depends on
+    'include_dirs ' # list of (absolute) dirs that contain headers this pkg needs
+    'location '     # absolute path to root dir of pkg
+    'manifest '     # the rossum manifest of this pkg
+    'objects'       # list of (src, obj) tuples
+)
+
+# a rossum 'space' has:
+#  - one path: an absolute path to the location of the space
+RossumSpaceInfo = collections.namedtuple('RossumSpaceInfo', 'path')
+
+# a rossum workspace has:
+RossumWorkspace = collections.namedtuple('RossumWorkspace',
+    'build '     #  - exactly one 'build space'
+    'pkgs '      #  - zero or more packages
+    'robot_ini ' #  - one robot-ini
+    'sources'    #  - one or more 'source space(s)'
+)
+
+
 
 
 
@@ -100,7 +146,7 @@ def main():
         "builds.".format(ROSSUM_VERSION))
 
     epilog=("Usage example:\n\n"
-        "  mkdir  C:\\foo\\bar\\build\n"
+        "  mkdir C:\\foo\\bar\\build\n"
         "  cd C:\\foo\\bar\\build\n"
         "  rossum C:\\foo\\bar\\src")
 
@@ -119,7 +165,7 @@ def main():
         metavar='ID', default=DEFAULT_CORE_VERSION, help="Version of "
         "the core files used when translating (default: %(default)s)")
     parser.add_argument('-d', '--dry-run', action='store_true', dest='dry_run',
-        help='Do everything except writing to Makefile')
+        help='Do everything except writing to build file')
     parser.add_argument('--ktrans', type=str, dest='ktrans', metavar='PATH',
         help="Location of ktrans (default: auto-detect)")
     parser.add_argument('--ktransw', type=str, dest='ktransw', metavar='PATH',
@@ -133,7 +179,7 @@ def main():
         metavar='INI', default=ROBOT_INI_NAME,
         help="Location of {0} (default: source dir)".format(ROBOT_INI_NAME))
     parser.add_argument('-w', '--overwrite', action='store_true', dest='overwrite',
-        help='Overwrite any Makefile that may exist in the build dir')
+        help='Overwrite any build file that may exist in the build dir')
     parser.add_argument('src_dir', type=str, metavar='SRC',
         help="Main directory with packages to build")
     parser.add_argument('build_dir', type=str, nargs='?', metavar='BUILD',
@@ -157,6 +203,7 @@ def main():
 
 
     logger.info("This is rossum v{0}".format(ROSSUM_VERSION))
+
 
 
     ############################################################################
@@ -211,24 +258,26 @@ def main():
         sys.exit(_OS_EX_DATAERR)
 
 
-    # always look in the source space
-    pkg_dirs = [source_dir]
-    # and any extra paths the user provided
-    pkg_dirs.extend(extra_paths)
-    # and finally look at the PKG_PATH if configured to do so
-    if not args.no_env and ENV_PKG_PATH in os.environ:
-        pkg_dirs.extend(os.environ[ENV_PKG_PATH].split(';'))
+    # try to find base directory for FANUC tools
+    try:
+        fr_base_dir = find_fr_install_dir(search_locs=FANUC_SEARCH_PATH)
+        logger.info("Using {} as FANUC software base directory".format(fr_base_dir))
+    except Exception as e:
+        logger.fatal("Couldn't determine FANUC software base directory, "
+            "aborting".format(e))
+        sys.exit(_OS_EX_DATAERR)
 
 
     # TODO: maybe generalise into 'find_tool(..)' or something (for maketp etc)
-
     # see if we need to find ktrans ourselves
     ktrans_path = KTRANS_BIN_NAME
     if not args.ktrans:
         logger.debug("Trying to auto-detect ktrans location ..")
 
         try:
-            ktrans_path = find_ktrans()
+            search_locs = [fr_base_dir]
+            search_locs.extend(KTRANS_SEARCH_PATH)
+            ktrans_path = find_ktrans(kbin_name=KTRANS_BIN_NAME, search_locs=search_locs)
         except MissingKtransException as mke:
             logger.fatal("Aborting: {0}".format(mke))
             sys.exit(_OS_EX_DATAERR)
@@ -247,391 +296,165 @@ def main():
                 "Aborting.".format(ktrans_path))
             sys.exit(_OS_EX_DATAERR)
 
+    logger.info("ktrans location: {0}".format(ktrans_path))
+
+
+    # try to find support directory for selected core software version
+    logger.info("Setting default system core version to: {}".format(args.core_version))
+    try:
+        fr_support_dir = find_ktrans_support_dir(fr_base_dir=fr_base_dir,
+            version_string=args.core_version)
+    except Exception as e:
+        logger.fatal("Couldn't determine core software support directory, "
+            "aborting".format(e))
+        sys.exit(_OS_EX_DATAERR)
+
+    logger.info("Karel core support dir: {}".format(fr_support_dir))
+
+
     # if user didn't supply an alternative, assume it's on the PATH
     ktransw_path = args.ktransw or KTRANSW_BIN_NAME
+    logger.info("ktransw location: {0}".format(ktransw_path))
+
+
+    # template and output file locations
+    template_dir  = os.path.dirname(os.path.realpath(__file__))
+    template_path = os.path.join(template_dir, BUILD_FILE_TEMPLATE_NAME)
+    build_file_path = os.path.join(build_dir, BUILD_FILE_NAME)
+
+    # check
+    if not os.path.isfile(template_path):
+        raise RuntimeError("Template file %s not found in template "
+            "dir %s" % (template_path, template_dir))
+
+    logger.debug("Using build file template: {0}".format(template_path))
+
+
+
+    ############################################################################
+    #
+    # Package discovery
+    #
+
+    # always look in the source space and any extra paths user provided
+    src_space_dirs = [source_dir]
+    # and any extra paths the user provided
+    src_space_dirs.extend(extra_paths)
+
+    logger.info("Source space(s) searched for packages (in order: src, args):")
+    for p in src_space_dirs:
+        logger.info('  {0}'.format(p))
+
+    # discover packages
+    src_space_pkgs = find_pkgs(src_space_dirs)
+    logger.info("Found {0} package(s) in source space(s):".format(len(src_space_pkgs)))
+    for pkg in src_space_pkgs:
+        logger.info("  {0} (v{1})".format(pkg.manifest.name, pkg.manifest.version))
+
+
+    # discover pkgs in non-source space directories, if those have been configured
+    other_pkgs = []
+    if (not args.no_env) and (ENV_PKG_PATH in os.environ):
+        logger.info("Other location(s) searched for packages ({}):".format(ENV_PKG_PATH))
+        other_pkg_dirs = os.environ[ENV_PKG_PATH].split(';')
+        for p in other_pkg_dirs:
+            logger.info('  {0}'.format(p))
+
+        other_pkgs.extend(find_pkgs(other_pkg_dirs))
+        logger.info("Found {0} package(s) in other location(s):".format(len(other_pkgs)))
+        for pkg in other_pkgs:
+            logger.info("  {0} (v{1})".format(pkg.manifest.name, pkg.manifest.version))
+
+
+    # process all discovered pkgs
+    all_pkgs = []
+    all_pkgs.extend(src_space_pkgs)
+    all_pkgs.extend(other_pkgs)
+
+    # make sure all their dependencies are present
+    try:
+        check_pkg_dependencies(all_pkgs)
+    except Exception as e:
+        logger.fatal("Error occured while checking packages: {}. Cannot "
+            "continue".format(e))
+        # TODO: find appropriate exit code
+        sys.exit(_OS_EX_DATAERR)
+
+    # all discovered pkgs get used for dependency and include path resolution,
+    resolve_dependencies(all_pkgs)
+    resolve_includes(all_pkgs)
+
+    # but only the pkgs in the source space(s) get their objects build
+    gen_obj_mappings(src_space_pkgs)
+
 
     # notify user of config
-    logger.info("ktrans location: {0}".format(ktrans_path))
-    logger.info("ktransw location: {0}".format(ktransw_path))
-    logger.info("Setting default system core version to: {0}".format(args.core_version))
+    logger.info("Building {} package(s)".format(len(src_space_pkgs)))
     logger.info("Build configuration:")
     logger.info("  source dir: {0}".format(source_dir))
     logger.info("  build dir : {0}".format(build_dir))
     logger.info("  robot.ini : {0}".format(robot_ini_loc))
-    logger.info("Paths searched for packages (in order: src, args, {0}):".format(ENV_PKG_PATH))
-    for p in pkg_dirs:
-        logger.info('  {0}'.format(p))
+    logger.info("Writing generated rules to {0}".format(build_file_path))
 
 
-    ############################################################################
-    #
-    # Discovery
-    #
-
-    # discover packages
-    pkgs = find_pkgs(pkg_dirs)
-    logger.info("Found {0} package(s):".format(len(pkgs)))
-    for pkg in pkgs:
-        logger.info("  {0} (v{1})".format(pkg.manifest.name, pkg.manifest.version))
-
-
-    # make sure all dependencies are present
-    logger.debug("Checking dependencies")
-    known_pkgs = [p.manifest.name for p in pkgs]
-    for pkg in pkgs:
-        logger.debug("  {0} - deps: {1}".format(
-            pkg.manifest.name,
-            ', '.join(pkg.manifest.depends) if len(pkg.manifest.depends) else 'none'))
-
-        missing = set(pkg.manifest.depends).difference(known_pkgs)
-        if len(missing) > 0:
-            logger.fatal("Package {0} is missing dependencies: {1}. Cannot "
-                "continue".format(pkg.manifest.name, ', '.join(missing)))
-            # TODO: find appropriate exit code
-            sys.exit(_OS_EX_DATAERR)
-        else:
-            logger.debug("    satisfied")
-
-
-
-    ############################################################################
-    #
-    # Generation
-    #
-
-    # finally: generate a Makefile for all discovered pkgs and the
-    #          various bits of configuration data we collected
-    mk_src = gen_makefile(
-        pkg_dirs=pkg_dirs,
-        pkgs=pkgs,
-        source_dir=source_dir,
-        build_dir=build_dir,
-        ktrans_path=ktrans_path,
-        ktransw_path=ktransw_path,
-        core_version=args.core_version,
-        robot_ini=robot_ini_loc)
-
+    # stop if user wanted a dry-run
     if args.dry_run:
-        logger.info("Requested dry-run, not saving Makefile")
+        logger.info("Requested dry-run, not saving build file")
         sys.exit(0)
 
 
     ############################################################################
     #
-    # Finalisation
+    # Template processing
     #
 
-    makefile_path = os.path.join(build_dir, MAKEFILE_NAME)
-    logger.info("Writing generated rules to {0}".format(makefile_path))
+    # populate dicts & lists needed by template
+    ktrans = KtransInfo(path=ktrans_path, support=KtransSupportDirInfo(
+        path=fr_support_dir,
+        version_string=args.core_version))
+    ktransw = KtransWInfo(path=ktransw_path)
+    bs_info = RossumSpaceInfo(path=build_dir)
+    sp_infos = [RossumSpaceInfo(path=p) for p in src_space_dirs]
+    robini_info = KtransRobotIniInfo(path=robot_ini_loc)
+
+    ws = RossumWorkspace(build=bs_info, sources=sp_infos,
+        robot_ini=robini_info, pkgs=src_space_pkgs)
+
+
 
     # don't overwrite existing files, unless instructed to do so
-    if (not args.overwrite) and os.path.exists(makefile_path):
+    if (not args.overwrite) and os.path.exists(build_file_path):
         logger.fatal("Existing {0} detected and '--overwrite' not specified. "
-            "Aborting".format(MAKEFILE_NAME))
+            "Aborting".format(BUILD_FILE_NAME))
         # TODO: find appropriate exit code
         sys.exit(_OS_EX_DATAERR)
 
-    # put it in the build dir
-    with open(makefile_path, 'w') as mk_f:
-        mk_f.write(mk_src)
+    # write out template
+    with open(build_file_path, 'w') as ofile:
+        # setup the dict for empy
+        globls = {
+            'ws'             : ws,
+            'ktrans'         : ktrans,
+            'ktransw'        : ktransw,
+            'rossum_version' : ROSSUM_VERSION,
+            'tstamp'         : datetime.datetime.now().isoformat(),
+        }
+
+        interp = em.Interpreter(
+            output=ofile, globals=globls,
+            options={em.RAW_OPT : True, em.BUFFERED_OPT : True})
+
+        # load and process the template
+        logger.debug("Processing template")
+        interp.file(open(template_path))
+        logger.debug("Shutting down empy")
+        interp.shutdown()
+
 
     # done
-    logger.info("Configuration successful, you may now run 'make' in the "
+    logger.info("Configuration successful, you may now run 'ninja' in the "
         "build directory.")
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-mk_header="""################################################################################
-#
-# This file was auto-generated by rossum v{version} at {stamp}.
-#
-# Package directories searched at configuration time:
-{pkg_dirs}
-#
-# Do not modify this file. Rather, regenerate it using rossum.
-#
-################################################################################
-"""
-
-
-def gen_mk_header(pkg_dirs):
-    import datetime
-    return mk_header.format(
-        version=ROSSUM_VERSION,
-        stamp=datetime.datetime.now().isoformat(),
-        pkg_dirs='\n'.join(['#  - ' + pkg_dir for pkg_dir in pkg_dirs]))
-
-
-
-mk_prefix="""
-## build related variables and commands ########################################
-
-# invoke as 'make VERBOSE=1' to get make to show recipe commands
-ifeq "$(VERBOSE)" ""
-\tVERBOSE=0
-endif
-
-ifeq "$(VERBOSE)" "0"
-\tSC=@
-endif
-
-# set at rossum configuration time
-SOURCE_DIR:={source_dir}
-BUILD_DIR:={build_dir}
-#INSTALL_DIR:=
-
-CC:={ktransw_path} --ktrans={ktrans_path}
-SUPPORT_VER?={core_version}
-ROBOT_INI:={robot_ini_loc}
-CFLAGS:=/ver $(SUPPORT_VER) /config $(ROBOT_INI)
-"""
-
-
-
-def gen_mk_prefix(source_dir, build_dir, ktrans_path, ktransw_path, core_version, robot_ini_loc):
-    return mk_prefix.format(
-        source_dir=source_dir,
-        build_dir=build_dir,
-        core_version=core_version,
-        ktrans_path=ktrans_path,
-        ktransw_path=ktransw_path,
-        robot_ini_loc=robot_ini_loc)
-
-
-
-
-mk_global_tgts="""
-## top-level targets ###########################################################
-
-.PHONY: all clean {phony_targets}
-
-.SUFFIXES:
-.SUFFIXES: .kl .pc
-
-all: {proj_pcode_tgts}
-
-tests: {proj_test_tgts}
-
-clean: {proj_clean_tgts}
-"""
-
-
-def gen_mk_global_tgts(pkgs):
-    phony_tgts = []
-    pcode_tgts = []
-    clean_tgts = []
-    test_tgts  = []
-    for pkg in pkgs:
-        pcode_tgts.append(pkg.manifest.name + '_pcode')
-        clean_tgts.append(pkg.manifest.name + '_clean')
-        test_tgts.append(pkg.manifest.name + '_tests')
-
-    phony_tgts.extend(pcode_tgts)
-    phony_tgts.extend(clean_tgts)
-    phony_tgts.extend(test_tgts)
-
-    phony_tgts = list(set(phony_tgts))
-
-    return mk_global_tgts.format(
-        phony_targets=' '.join(phony_tgts),
-        proj_pcode_tgts=' '.join(pcode_tgts),
-        proj_test_tgts=' '.join(test_tgts),
-        proj_clean_tgts=' '.join(clean_tgts))
-
-
-
-
-
-
-
-
-
-
-
-
-
-### project specific variables
-
-tmpl_vars = """{project}_DIR:={proj_loc}
-{project}_DEPENDENCIES:={proj_dependencies}
-{project}_INCLUDE_DIRECTORIES={proj_include_dirs}
-{project}_INCLUDE_FLAGS=$(addprefix /I,$({project}_INCLUDE_DIRECTORIES))
-{project}_OBJS:={proj_objs}
-{project}_OBJS:=$(addprefix $(BUILD_DIR)/,$({project}_OBJS))
-{project}_test_OBJS:={proj_test_objs}
-{project}_test_OBJS:=$(addprefix $(BUILD_DIR)/,$({project}_test_OBJS))
-
-"""
-
-def gen_obj_names(srcs):
-    objs = []
-    for src in srcs:
-        fname, _ = os.path.splitext(os.path.basename(src))
-        objs.append(fname + '.pc')
-    return objs
-
-
-def gen_mk_proj_vars(pkg):
-    # include dirs of package itself
-    inc_dirs = ['$({0}_DIR)\\{1}'.format(pkg.manifest.name, inc) for inc in pkg.manifest.includes]
-    # and it's immediate dependencies
-    inc_dirs.extend(['$({0}_INCLUDE_DIRECTORIES)'.format(dep) for dep in pkg.manifest.depends])
-
-    objs = gen_obj_names(pkg.manifest.source)
-    tobjs = gen_obj_names(pkg.manifest.tests)
-
-    return tmpl_vars.format(
-        project=pkg.manifest.name,
-        proj_dependencies=' '.join(pkg.manifest.depends),
-        proj_loc=pkg.location,
-        proj_include_dirs=' '.join(inc_dirs),
-        proj_objs=' '.join(objs),
-        proj_test_objs=' '.join(tobjs))
-
-
-
-### dependency includes
-tmpl_dep_includes = """-include $({project}_OBJS:.pc=.d) $({project}_test_OBJS:.pc=.d)
-"""
-
-
-def gen_mk_proj_dep_includes(pkg):
-    # don't generate the include statement if this package doesn't have
-    # any binary targets (header only library, fi)
-    if not (len(pkg.manifest.source) == 0 and len(pkg.manifest.tests) == 0):
-        return tmpl_dep_includes.format(project=pkg.manifest.name)
-    return ''
-
-
-
-
-### per source file target
-tmpl_src_recipe = """$(BUILD_DIR)/{oname_base}.pc: $({project}_DIR)/{sname}
-\t$(SC)echo Building Karel program :: $(notdir $@)
-\t$(SC)$(CC) -q $({project}_INCLUDE_FLAGS) $< $@ $(CFLAGS)
-\t$(SC)$(CC) -q -MM -MP -MT $$(BUILD_DIR)/{oname_base}.pc -MF $(BUILD_DIR)/{oname_base}.d $({project}_INCLUDE_FLAGS) $< $(CFLAGS)
-"""
-
-### per test file target
-tmpl_test_recipe = """$(BUILD_DIR)/{oname_base}.pc: $({project}_DIR)/{sname}
-\t$(SC)echo Building Karel test    :: $(notdir $@)
-\t$(SC)$(CC) -q $({project}_INCLUDE_FLAGS) $< $@ $(CFLAGS)
-\t$(SC)$(CC) -q -MM -MP -MT $$(BUILD_DIR)/{oname_base}.pc -MF $(BUILD_DIR)/{oname_base}.d $({project}_INCLUDE_FLAGS) $< $(CFLAGS)
-"""
-
-
-def gen_mk_proj_bin_tgt(pkg, kl_src, template):
-    fname, _ = os.path.splitext(os.path.basename(kl_src))
-    return template.format(
-        project=pkg.manifest.name,
-        oname_base=fname,
-        sname=kl_src)
-
-def gen_mk_proj_bin_tgts(pkg):
-    res = ""
-    for src in pkg.manifest.source:
-        res += gen_mk_proj_bin_tgt(pkg, src, tmpl_src_recipe)
-        res += '\n'
-    return res
-
-def gen_mk_proj_test_tgts(pkg):
-    res = ""
-    for src in pkg.manifest.tests:
-        res += gen_mk_proj_bin_tgt(pkg, src, tmpl_test_recipe)
-        res += '\n'
-    return res
-
-
-
-
-
-
-
-### project specific targets
-
-tmpl_proj_tgts = """{project}_clean:
-\t$(SC)del /q /f $(subst /,\,$({project}_OBJS) $({project}_test_OBJS)) 2>nul
-\t$(SC)del /q /f $(subst /,\,$({project}_OBJS:.pc=.d) $({project}_test_OBJS:.pc=.d)) 2>nul
-
-{project}_pcode: $(addsuffix _pcode,$({project}_DEPENDENCIES)) {project}_only
-
-{project}_tests: $({project}_test_OBJS)
-
-{project}_only: $({project}_OBJS)
-"""
-
-
-def gen_mk_proj_tgts(pkg):
-    dep_pcode_tgts_str = ' '.join([dep + '_pcode' for dep in pkg.manifest.depends])
-
-    return tmpl_proj_tgts.format(
-        project=pkg.manifest.name,
-        dep_pcode_tgts=dep_pcode_tgts_str)
-
-
-
-
-def gen_makefile_section(pkg):
-    mk_sec  = gen_mk_proj_vars(pkg)
-    mk_sec += gen_mk_proj_dep_includes(pkg) + '\n'
-    mk_sec += gen_mk_proj_bin_tgts(pkg)
-    mk_sec += gen_mk_proj_test_tgts(pkg)
-    mk_sec += gen_mk_proj_tgts(pkg)
-
-    return mk_sec
-
-
-def gen_makefile(pkg_dirs, pkgs, source_dir, build_dir, ktrans_path, ktransw_path, core_version, robot_ini):
-
-    res  = gen_mk_header(pkg_dirs) + '\n\n'
-    res += gen_mk_prefix(source_dir, build_dir, ktrans_path, ktransw_path, core_version, robot_ini)
-    res += "\n\n"
-    res += gen_mk_global_tgts(pkgs)
-    res += "\n\n"
-
-    for pkg in pkgs:
-        res += "## {project} ###################\n\n".format(project=pkg.manifest.name)
-        res += gen_makefile_section(pkg)
-        res += "\n\n"
-    return res
 
 
 
@@ -672,7 +495,7 @@ def parse_manifest(fpath):
         raise InvalidManifestException("Unexpected manifest version: {0} "
             "(expected {1})".format(manver, MANIFEST_VERSION))
 
-    manifest = Manifest(
+    return RossumManifest(
         name=mfest['project'],
         description=mfest['description'],
         version=mfest['version'],
@@ -680,35 +503,147 @@ def parse_manifest(fpath):
         tests=mfest['tests'] if 'tests' in mfest else [],
         includes=mfest['includes'] if 'includes' in mfest else [],
         depends=mfest['depends'] if 'depends' in mfest else [])
-    return Pkg(location=os.path.dirname(fpath), manifest=manifest)
 
 
 def find_pkgs(dirs):
-    manifests = []
+    manifest_file_paths = []
     for d in dirs:
         logger.debug("Searching in {0}".format(d))
-        manifests_ = find_files_recur(d, MANIFEST_NAME)
-        manifests.extend(manifests_)
-        logger.debug("  found {0} manifest(s)".format(len(manifests_)))
-    logger.debug("Found {0} manifest(s) total".format(len(manifests)))
+        manifest_file_paths_ = find_files_recur(d, MANIFEST_NAME)
+        manifest_file_paths.extend(manifest_file_paths_)
+        logger.debug("  found {0} manifest(s)".format(len(manifest_file_paths_)))
+    logger.debug("Found {0} manifest(s) total".format(len(manifest_file_paths)))
 
     pkgs = []
-    for mfest in manifests:
+    for manifest_file_path in manifest_file_paths:
         try:
-            pkgs.append(parse_manifest(mfest))
+            manifest = parse_manifest(manifest_file_path)
+            pkg = RossumPackage(
+                    dependencies=[],
+                    include_dirs=[],
+                    location=os.path.dirname(manifest_file_path),
+                    manifest=manifest,
+                    objects=[])
+            pkgs.append(pkg)
         except Exception as e:
-            mfest_loc = os.path.join(os.path.split(os.path.dirname(mfest))[1], os.path.basename(mfest))
-            logger.warn("Error parsing manifest in {0}: {1}.".format(mfest_loc, e))
+            mfest_loc = os.path.join(os.path.split(
+                os.path.dirname(manifest_file_path))[1], os.path.basename(manifest_file_path))
+            logger.warn("Error parsing manifest {0}: {1}.".format(mfest_loc, e))
 
     return pkgs
 
 
+def check_pkg_dependencies(pkgs):
+    """ make sure all dependencies are present
+    """
+    known_pkgs = [p.manifest.name for p in pkgs]
+    logger.debug("Checking dependencies for: {}".format(', '.join(known_pkgs)))
+    for pkg in pkgs:
+        logger.debug("  {0} - deps: {1}".format(
+            pkg.manifest.name,
+            ', '.join(pkg.manifest.depends) if len(pkg.manifest.depends) else 'none'))
+
+        missing = set(pkg.manifest.depends).difference(known_pkgs)
+        if len(missing) > 0:
+            raise MissingPkgDependency("Package {0} is missing dependencies: {1}"
+                .format(pkg.manifest.name, ', '.join(missing)))
+        else:
+            logger.debug("    satisfied")
 
 
-def find_ktrans(kbin_name=KTRANS_BIN_NAME, search_locs=KTRANS_SEARCH_PATH):
-    # TODO: check PATH first
+def find_in_list(l, pred):
+    for i in l:
+        if pred(i):
+            return i
+    return None
 
-    # try the windows registry
+def resolve_dependencies(pkgs):
+    """ Maps dependency pkg names to RossumPackage instances
+    """
+    pkg_names = [p.manifest.name for p in pkgs]
+    logger.debug("Resolving dependencies for: {}".format(', '.join(pkg_names)))
+    for pkg in pkgs:
+        logger.debug("  {}".format(pkg.manifest.name))
+
+        for dep_pkg_name in pkg.manifest.depends:
+            dep_pkg = find_in_list(pkgs, lambda p: p.manifest.name == dep_pkg_name)
+
+            # this should not be possible, as pkg dependency relationships
+            # should have been checked earlier, but you never know.
+            if dep_pkg is None:
+                raise MissingPkgDependency("Error finding internal pkg instance for '{}', "
+                    "can't find it".format(dep_pkg_name))
+            logger.debug("    {}: found".format(dep_pkg_name))
+            pkg.dependencies.append(dep_pkg)
+
+
+def dedup(seq):
+    """ Remove duplicates from a sequence, but:
+
+     1. don't change element order
+     2. keep the last occurence of each element instead of the first
+
+    Example:
+       a = [1, 2, 1, 3, 4, 1, 2, 6, 2]
+       b = dedup(a)
+
+    b is now: [3 4 1 6 2]
+    """
+    out = []
+    for e in reversed(seq):
+        if e not in out:
+            out.insert(0, e)
+    return out
+
+def resolve_includes(pkgs):
+    """ Gather include directories for all packages in 'pkgs'.
+    """
+    pkg_names = [p.manifest.name for p in pkgs]
+    logger.debug("Resolving includes for: {}".format(', '.join(pkg_names)))
+
+    for pkg in pkgs:
+        # TODO: watch out for circular dependencies
+        logger.debug("  {}".format(pkg.manifest.name))
+        # TODO: is dedup ok here? Doesn't change order of include dirs, but
+        #       does change the resulting include path
+        inc_dirs = dedup(resolve_includes_for_pkg(pkg))
+        pkg.include_dirs.extend(inc_dirs)
+        logger.debug("    added {} path(s)".format(len(inc_dirs)))
+
+
+def resolve_includes_for_pkg(pkg):
+    """ Recursively gather include directories for a specific package.
+    Makes all include directories absolute as well.
+    """
+    inc_dirs = []
+    # include dirs of current pkg first
+    for inc_dir in pkg.manifest.includes:
+        abs_inc = os.path.abspath(os.path.join(pkg.location, inc_dir))
+        inc_dirs.append(abs_inc)
+    # then ask dependencies
+    for dep_pkg in pkg.dependencies:
+        inc_dirs.extend(resolve_includes_for_pkg(dep_pkg))
+    return inc_dirs
+
+
+def gen_obj_mappings(pkgs):
+    """ Updates the 'objects' member variable of each pkg with tuples of the
+    form (path\to\a.kl, a.pc).
+    """
+    pkg_names = [p.manifest.name for p in pkgs]
+    logger.debug("Generating src to obj mappings for: {}".format(', '.join(pkg_names)))
+
+    for pkg in pkgs:
+        logger.debug("  {}".format(pkg.manifest.name))
+
+        for src in pkg.manifest.source:
+            src = src.replace('/', '\\')
+            obj = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], PCODE_SUFFIX)
+            logger.debug("    adding: {} -> {}".format(src, obj))
+            pkg.objects.append((src, obj))
+
+
+def find_fr_install_dir(search_locs):
     try:
         import _winreg as wreg
 
@@ -717,18 +652,14 @@ def find_ktrans(kbin_name=KTRANS_BIN_NAME, search_locs=KTRANS_SEARCH_PATH):
         fr_install_dir = wreg.QueryValueEx(fr_key, "InstallDir")[0]
 
         # get roboguide version
+        # TODO: this will fail if roboguide isn't installed
         rg_key = wreg.OpenKey(wreg.HKEY_LOCAL_MACHINE, r'Software\FANUC\ROBOGUIDE', 0, wreg.KEY_READ)
         rg_ver = wreg.QueryValueEx(rg_key, "Version")[0]
 
         logger.debug("Found Roboguide version: {0}".format(rg_ver))
-        logger.debug("Roboguide installed in: {0}".format(fr_install_dir))
-
-        # see if it is in the default location
-        ktrans_loc = os.path.join(fr_install_dir, 'WinOLPC', 'bin')
-        ktrans_path = os.path.join(ktrans_loc, kbin_name)
-        if os.path.exists(ktrans_path):
-            logger.debug("Found {0} in {1} via Windows registry".format(kbin_name, ktrans_loc))
-            return ktrans_path
+        if os.path.exists(os.path.join(fr_install_dir, 'Shared')):
+            logger.debug("Most likely FANUC base-dir: {}".format(fr_install_dir))
+            return fr_install_dir
 
     except WindowsError as we:
         logger.debug("Couldn't find FANUC registry key(s), trying other methods")
@@ -736,21 +667,48 @@ def find_ktrans(kbin_name=KTRANS_BIN_NAME, search_locs=KTRANS_SEARCH_PATH):
         logger.debug("Couldn't access Windows registry, trying other methods")
 
     # no windows registry, try looking in the file system
-    logger.warn("Can't find {0} using registry, switching to FS search".format(kbin_name))
-    for ktrans_loc in search_locs:
-        logger.debug("Looking in '{0}'".format(ktrans_loc))
+    logger.warn("Can't find FANUC base-dir using registry, switching to file-system search")
+
+    for search_loc in search_locs:
+        logger.debug("Looking in '{0}'".format(search_loc))
+        candidate_path = os.path.join(search_loc, 'Shared')
+        if os.path.exists(candidate_path):
+            logger.debug("Found FANUC base-dir: {}".format(search_loc))
+            return candidate_path
+
+    logger.warn("Exhausted all methods to find FANUC base-dir")
+    raise Exception("Can't find FANUC base-dir anywhere")
+
+
+def find_ktrans(kbin_name, search_locs):
+    # TODO: check PATH first
+
+    for search_loc in search_locs:
+        # see if it is in the default location
+        ktrans_loc = os.path.join(search_loc, 'WinOLPC', 'bin')
         ktrans_path = os.path.join(ktrans_loc, kbin_name)
+
+        logger.debug("Looking in {} ..".format(ktrans_loc))
         if os.path.exists(ktrans_path):
-            logger.debug("Found {0} in '{1}' in the FS".format(kbin_name, ktrans_loc))
+            logger.debug("Found {} in {}".format(kbin_name, ktrans_loc))
             return ktrans_path
 
-    logger.warn("Exhausted all methods to find {0}".format(kbin_name))
-
-    # couldn't find it
-    raise MissingKtransException("Can't find {0} anywhere".format(kbin_name))
+    logger.warn("Can't find ktrans anywhere")
+    raise MissingKtransException("Can't find {} anywhere".format(kbin_name))
 
 
+def find_ktrans_support_dir(fr_base_dir, version_string):
+    logger.debug('Trying to find support dir for core version: {}'.format(version_string))
+    version_dir = version_string.replace('.', '')
+    support_dir = os.path.join(fr_base_dir, 'WinOLPC', 'Versions', version_dir, 'support')
 
+    logger.debug("Looking in {} ..".format(support_dir))
+    if os.path.exists(support_dir):
+        logger.debug("Found {} support dir: {}".format(version_string, support_dir))
+        return support_dir
+
+    raise Exception("Can't determine ktrans support dir for core version {}"
+        .format(version_string))
 
 
 
