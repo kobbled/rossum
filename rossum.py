@@ -239,17 +239,12 @@ def main():
         sys.exit(_OS_EX_DATAERR)
 
 
-    # for 'robot.ini', handle two cases:
-    #  1) relative: look for that name in SOURCE DIR
-    #  2) absolute: accept as-is
-    if os.path.isabs(args.robot_ini):
-        robot_ini_loc = args.robot_ini
-        logger.debug("Using absolute path to (replacement) {0}: {1}".format(
-            ROBOT_INI_NAME, robot_ini_loc))
-    else:
-        robot_ini_loc = os.path.join(source_dir, args.robot_ini)
-        logger.debug("Expecting (replacement) {0} at: {1}".format(
-            ROBOT_INI_NAME, robot_ini_loc))
+    # if parameter isn't already absolute, make it absolute.
+    # NOTE: this will make the path relative to the current CWD, but
+    #       that is the idea.
+    robot_ini_loc = os.path.abspath(args.robot_ini)
+    logger.debug("Expecting {0} at: {1}".format(
+        ROBOT_INI_NAME, robot_ini_loc))
 
     # check that it actually exists
     if not os.path.exists(robot_ini_loc):
