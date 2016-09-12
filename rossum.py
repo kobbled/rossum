@@ -224,10 +224,10 @@ def main():
         sys.exit(_OS_EX_DATAERR)
 
     # refuse to do in-source builds
-    if os.path.exists(os.path.join(source_dir, MANIFEST_NAME)):
-        logger.fatal("Found a package manifest ({0}) in the source "
-            "dir ({1}). Cowerdly refusing to do in-source builds.".format(
-                MANIFEST_NAME, source_dir))
+    if os.path.exists(os.path.join(build_dir, MANIFEST_NAME)):
+        logger.fatal("Found a package manifest ({0}) in the build "
+            "dir ({1}). Refusing to do in-source builds.".format(
+                MANIFEST_NAME, build_dir))
         # TODO: find appropriate exit code
         sys.exit(_OS_EX_DATAERR)
 
