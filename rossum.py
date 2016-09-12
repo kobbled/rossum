@@ -159,8 +159,6 @@ def main():
         version='%(prog)s {0}'.format(ROSSUM_VERSION))
     parser.add_argument('-q', '--quiet', action='store_true', dest='quiet',
         help='Be quiet (only warnings and errors will be shown)')
-    #parser.add_argument('-b', '--create-build', action='store_true',
-    #    dest='create_build', help="Create build dir if it doesn't exist")
     parser.add_argument('-c', '--core', type=str, dest='core_version',
         metavar='ID', default=DEFAULT_CORE_VERSION, help="Version of "
         "the core files used when translating (default: %(default)s)")
@@ -185,10 +183,6 @@ def main():
     parser.add_argument('build_dir', type=str, nargs='?', metavar='BUILD',
         help="Directory for out-of-source builds (default: 'cwd')")
     args = parser.parse_args()
-
-
-    # TODO: remove when / if we support creating build dirs
-    args.create_build = False
 
 
     # configure the logger
@@ -232,7 +226,7 @@ def main():
         sys.exit(_OS_EX_DATAERR)
 
     # make sure that build dir exists
-    if not os.path.exists(build_dir) and not args.create_build:
+    if not os.path.exists(build_dir):
         logger.fatal("Directory '{0}' does not exist (and not creating it), "
             "aborting".format(build_dir))
         # TODO: find appropriate exit code
