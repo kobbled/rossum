@@ -1,7 +1,7 @@
 # rossum
 v0.0.14
 
-This is `rossum`, a cmake-like `Makefile` generator for Fanuc Robotics (Karel)
+This is `rossum`, a CMake-like build file generator for Fanuc Robotics (Karel)
 projects.
 
 
@@ -10,22 +10,24 @@ projects.
 This tool introduces a package based workflow for Karel development: packages
 are directories that contain a marker file (a *manifest*) that contains some
 metadata describing the dependencies of that package and any translatable
-targets. Detection of packages and generation of the `Makefile` is done once
-at configuration time, relying on `make`'s dependency resolution to build
-all targets in the correct order.
+targets. Detection of packages and generation of the build file is done once
+at configuration time, relying on the build tool's dependency resolution to
+build all targets in the correct order.
 
 
 ## Requirements
 
 `rossum` is written in Python 2, so naturally it needs a Python 2 install.
 
-In addition, the generated `Makefile`s depend on a version of GNU Make being
-available and on [ktransw][]. The author uses GNU Make 3.80 from [unxutils][]
-(be sure to get the version distributed in `UnxUpdates.zip`). This is a
-stand-alone executable with no additional dependencies. `ktransw` must be
-version 0.1.1 or newer.
+The generated Ninja build files require a recent (> 1.7.1) version of [Ninja][]
+to be present.
 
-See the [ktransw][] documentation for additional requirements.
+For translating Karel sources, `rossum` expects [ktransw][] version 0.1.1 or
+newer. Refer to the `ktransw` documentation for any additional requirements
+that `ktransw` may have.
+
+Finally, `rossum` uses [EmPy][] for transforming the build file template to the
+actual build files.
 
 
 ## Installation
@@ -36,14 +38,18 @@ setting up the `PATH` should be able to successfully run `rossum` from anywhere.
 
 For installation of `ktransw`, see [ktransw][].
 
-For maximum convenience, make sure that `make.exe` and `ktransw.cmd` are also
-on the `PATH`. An alternative would be to copy `make.exe` to the build
-directory of the workspace (the one containing the generated `Makefile`) and
+For maximum convenience, make sure that `ninja.exe` and `ktransw.cmd` are also
+on the `PATH`. An alternative would be to copy `ninja.exe` to the build
+directory of the workspace (the one containing the generated build file) and
 to specify the path to `ktransw.cmd` as a command line argument to `rossum`.
 Note that this would have to be repeated each time a new build directory is
 created.
 
 See [hhpywin][] for information on how to install Python on Windows.
+
+[EmPy][] can be installed with `pip` with `pip install empy` in a Windows
+command shell session. Usage and installation of `pip` is covered in
+[hhpywin][].
 
 
 ## Usage
@@ -98,7 +104,7 @@ that show how to use `rossum`.
 Yes, it only runs on Windows, actually.
 
 #### Is Roboguide (still) needed?
-`rossum` only generates `Makefile`s, it does not replace `ktrans` or Roboguide,
+`rossum` only generates build files, it does not replace `ktrans` or Roboguide,
 so depending on your project's requirements (is it Karel only? Do you need to
 translate TP programs, etc), yes, you still need Roboguide.
 
@@ -113,29 +119,23 @@ JSON file that describes what `rossum` should do with the files in the package.
 It doesn't currently understand Roboguide workcells (`.frw` and others), but
 that may change in future versions.
 
-#### Copying a Makefile to another build directory doesn't work
-`rossum` generates `Makefile`s with absolute paths. Moving the `Makefile` to
+#### Copying a build file to another build directory doesn't work
+`rossum` generates build files with absolute paths. Moving the build file to
 another directory is possible, but compilation artefacts (`.pc`) will still
 be placed in the build directory that was used when generating the file.
 
 This may change in future versions (see `TODO.md`).
 
 #### How do I translate my sources for a different core version?
-`rossum` by default will configure the `Makefile` to use the `V7.70-1` version
-of the system core files. This can be changed both at generation time as well
-as when invoking `make`. Use the `--core` command line option for setting a
-default that will persist as long as the `Makefile` remains unchanged. For a
-temporary override, simply set the `SUPPORT_VER` environment variable when
-invoking `make`. To build for `V8.30-1` for example, use:
-
-```
-make SUPPORT_VER=V8.30-1
-```
+`rossum` by default will configure the build file to use the `V7.70-1` version
+of the system core files. This can be changed at generation time using the 
+`--core` command line option for setting a default that will persist as long
+as the build file remains unchanged.
 
 See the output of `ktrans /?` for a list of supported core versions.
 
 #### I don't want to open-source my Karel projects, can I still use this?
-Of course: you are not required to open-source anything. The licenses stated
+Of course: you are not required to open-source anything. The licenses used
 in the [rossum_example_ws][] workspace are just examples. `rossum` does not
 use the information in the `license` key at this time, so there are no
 restrictions on the values allowed there.
@@ -163,7 +163,8 @@ author of `rossum` is not affiliated with Fanuc in any way.
 
 
 
+[ninja]: https://ninja-build.org
 [ktransw]: https://github.com/gavanderhoorn/ktransw_py
+[EmPy]: https://pypi.python.org/pypi/EmPy
 [rossum_example_ws]: https://github.com/gavanderhoorn/rossum_example_ws
-[unxutils]: http://unxutils.sourceforge.net
 [hhpywin]: http://docs.python-guide.org/en/latest/starting/install/win/
