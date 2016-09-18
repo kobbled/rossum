@@ -113,7 +113,8 @@ RossumPackage = collections.namedtuple('RossumPackage',
     'include_dirs ' # list of (absolute) dirs that contain headers this pkg needs
     'location '     # absolute path to root dir of pkg
     'manifest '     # the rossum manifest of this pkg
-    'objects'       # list of (src, obj) tuples
+    'objects '      # list of (src, obj) tuples
+    'tests'         # list of (src, obj) tuples for tests
 )
 
 # a rossum 'space' has:
@@ -512,7 +513,8 @@ def find_pkgs(dirs):
                     include_dirs=[],
                     location=os.path.dirname(manifest_file_path),
                     manifest=manifest,
-                    objects=[])
+                    objects=[],
+                    tests=[])
             pkgs.append(pkg)
         except Exception as e:
             mfest_loc = os.path.join(os.path.split(
@@ -626,6 +628,13 @@ def gen_obj_mappings(pkgs):
         logger.debug("  {}".format(pkg.manifest.name))
 
         for src in pkg.manifest.source:
+            src = src.replace('/', '\\')
+            obj = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], PCODE_SUFFIX)
+            logger.debug("    adding: {} -> {}".format(src, obj))
+            pkg.objects.append((src, obj))
+
+        # TODO: refactor this: make test rule generation optional
+        for src in pkg.manifest.tests:
             src = src.replace('/', '\\')
             obj = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], PCODE_SUFFIX)
             logger.debug("    adding: {} -> {}".format(src, obj))
