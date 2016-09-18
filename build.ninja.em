@@ -70,6 +70,8 @@ rule ktrans_pc
 ### build statements ###########################################################
 
 @[for pkg in ws.pkgs]@
+@# don't generate rules for packages that don't have any objects declared
+@[if len(pkg.objects) > 0]@
 ### @(pkg.manifest.name) ###################
 
 @(pkg.manifest.name)_dir = @(pkg.location)
@@ -86,4 +88,5 @@ build $build_dir\@(obj): ktrans_pc $@(pkg.manifest.name)_dir\@(src)
 @# TODO: add tests
 
 @# pkg in ws.pkgs
+@[end if]@
 @[end for]@
