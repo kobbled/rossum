@@ -234,18 +234,30 @@ def main():
         sys.exit(_OS_EX_DATAERR)
 
 
-    # if parameter isn't already absolute, make it absolute.
-    # NOTE: this will make the path relative to the current CWD, but
-    #       that is the idea.
+    # check we can find a usable robot.ini somewhere.
+    # strategy:
+    #  - if user provided a location, use that
+    #  - if not, try CWD (default value of arg is relative to CWD)
+    #  - if that doesn't work, try source space
+
+    # because 'args.robot_ini' has a default which is simply 'robot.ini', we
+    # cover the first two cases in the above list with this single statement
     robot_ini_loc = os.path.abspath(args.robot_ini)
-    logger.debug("Expecting {0} at: {1}".format(
-        ROBOT_INI_NAME, robot_ini_loc))
 
     # check that it actually exists
+    logger.debug("Checking: {}".format(robot_ini_loc))
     if not os.path.exists(robot_ini_loc):
-        logger.fatal("The file '{0}' does not exist, and no alternative "
-            "given, aborting.".format(robot_ini_loc))
-        sys.exit(_OS_EX_DATAERR)
+        logger.warn("No {} in CWD, and no alternative provided, trying "
+            "source space".format(ROBOT_INI_NAME))
+
+        robot_ini_loc = os.path.join(source_dir, ROBOT_INI_NAME)
+        logger.debug("Checking: {}".format(robot_ini_loc))
+        if os.path.exists(robot_ini_loc):
+            logger.info("Found {} in source space".format(ROBOT_INI_NAME))
+        else:
+            logger.warn("File does not exist: {}".format(robot_ini_loc))
+            logger.fatal("Cannot find a {}, aborting".format(ROBOT_INI_NAME))
+            sys.exit(_OS_EX_DATAERR)
 
 
     # try to find base directory for FANUC tools
