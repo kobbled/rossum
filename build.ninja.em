@@ -59,12 +59,15 @@ plain_ktrans = @(ktrans.path)
 rule ktrans_pc
   command = $cc_ktrans $
                -q $
+               -MM -MP -MT $out -MF $out.d $
                --ktrans=$plain_ktrans $
                $lib_includes $
                /I@(ktrans.support.path) $
                $in $
                /ver @(ktrans.support.version_string) $
                /config @(ws.robot_ini.path)
+  depfile = $out.d
+  deps = gcc
 
 
 ### build statements ###########################################################
