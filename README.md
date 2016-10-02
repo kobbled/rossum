@@ -87,7 +87,8 @@ optional arguments:
 
 Usage example:
 
-  mkdir  C:\foo\bar\build
+  mkdir C:\foo\bar\build
+  cd C:\foo\bar\build
   rossum C:\foo\bar\src
 ```
 
