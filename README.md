@@ -45,11 +45,12 @@ to specify the path to `ktransw.cmd` as a command line argument to `rossum`.
 Note that this would have to be repeated each time a new build directory is
 created.
 
-See [hhpywin][] for information on how to install Python on Windows.
+See [Installing Python on Windows][] in the HHGtP for information on how to
+install Python on Windows.
 
 [EmPy][] can be installed with `pip` with `pip install empy` in a Windows
 command shell session. Usage and installation of `pip` is covered in
-[hhpywin][].
+[Installing Python on Windows][].
 
 
 ## Usage
@@ -197,4 +198,4 @@ author of `rossum` is not affiliated with Fanuc in any way.
 [ktransw]: https://github.com/gavanderhoorn/ktransw_py
 [EmPy]: https://pypi.python.org/pypi/EmPy
 [rossum_example_ws]: https://github.com/gavanderhoorn/rossum_example_ws
-[hhpywin]: http://docs.python-guide.org/en/latest/starting/install/win/
+[Installing Python on Windows]: http://docs.python-guide.org/en/latest/starting/install/win/
