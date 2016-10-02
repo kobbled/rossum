@@ -173,7 +173,8 @@ def main():
         help='Do not search the {0}, even if it is set'.format(ENV_PKG_PATH))
     parser.add_argument('-p', '--pkg-dir', action='append', type=str,
         dest='extra_paths', metavar='PATH', default=[],
-        help='Additional paths to search for packages (multiple allowed)')
+        help='Additional paths to search for packages (multiple allowed). '
+        'Note: this essentially extends the source space.')
     parser.add_argument('-r', '--robot-ini', type=str, dest='robot_ini',
         metavar='INI', default=ROBOT_INI_NAME,
         help="Location of {0} (default: source dir)".format(ROBOT_INI_NAME))
