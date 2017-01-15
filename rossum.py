@@ -163,6 +163,10 @@ def main():
     parser.add_argument('-c', '--core', type=str, dest='core_version',
         metavar='ID', default=DEFAULT_CORE_VERSION, help="Version of "
         "the core files used when translating (default: %(default)s)")
+    parser.add_argument('--support', type=str, dest='support_dir',
+        metavar='PATH', help="Location of KAREL support directory "
+            "(default: auto-detect based on selected core version and "
+            "FANUC registry keys)")
     parser.add_argument('-d', '--dry-run', action='store_true', dest='dry_run',
         help='Do everything except writing to build file')
     parser.add_argument('--ktrans', type=str, dest='ktrans', metavar='PATH',
@@ -304,13 +308,25 @@ def main():
 
     # try to find support directory for selected core software version
     logger.info("Setting default system core version to: {}".format(args.core_version))
-    try:
-        fr_support_dir = find_ktrans_support_dir(fr_base_dir=fr_base_dir,
-            version_string=args.core_version)
-    except Exception as e:
-        logger.fatal("Couldn't determine core software support directory, "
-            "aborting".format(e))
-        sys.exit(_OS_EX_DATAERR)
+    # see if we need to find support dir ourselves
+    if not args.support_dir:
+        try:
+            fr_support_dir = find_ktrans_support_dir(fr_base_dir=fr_base_dir,
+                version_string=args.core_version)
+        except Exception as e:
+            logger.fatal("Couldn't determine core software support directory, "
+                "aborting".format(e))
+            sys.exit(_OS_EX_DATAERR)
+    # or if user provided its location
+    else:
+        fr_support_dir = args.support_dir
+        logger.debug("User provided support dir location: {0}".format(fr_support_dir))
+
+        # make sure it exists
+        if not os.path.exists(fr_support_dir):
+            logger.fatal("Specified support dir ({0}) does not exist. "
+                "Aborting.".format(fr_support_dir))
+            sys.exit(_OS_EX_DATAERR)
 
     logger.info("Karel core support dir: {}".format(fr_support_dir))
 
