@@ -712,7 +712,7 @@ def find_fr_install_dir(search_locs):
         candidate_path = os.path.join(search_loc, 'Shared')
         if os.path.exists(candidate_path):
             logger.debug("Found FANUC base-dir: {}".format(search_loc))
-            return candidate_path
+            return search_loc
 
     logger.warn("Exhausted all methods to find FANUC base-dir")
     raise Exception("Can't find FANUC base-dir anywhere")
