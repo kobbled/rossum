@@ -386,7 +386,7 @@ def main():
     other_pkgs = []
     if (not args.no_env) and (ENV_PKG_PATH in os.environ):
         logger.info("Other location(s) searched for packages ({}):".format(ENV_PKG_PATH))
-        other_pkg_dirs = os.environ[ENV_PKG_PATH].split(';')
+        other_pkg_dirs = [p for p in os.environ[ENV_PKG_PATH].split(';') if len(p) > 0]
         for p in other_pkg_dirs:
             logger.info('  {0}'.format(p))
 
