@@ -270,9 +270,20 @@ def main():
         fr_base_dir = find_fr_install_dir(search_locs=FANUC_SEARCH_PATH)
         logger.info("Using {} as FANUC software base directory".format(fr_base_dir))
     except Exception as e:
-        logger.fatal("Couldn't determine FANUC software base directory, "
-            "aborting".format(e))
-        sys.exit(_OS_EX_DATAERR)
+        # not being able to find the Fanuc base dir is only a problem if:
+        #  1) no ktrans.exe location provided
+        #  2) no support dir location provided
+        #
+        # exit with a fatal error if we're missing either of those
+        if (not args.ktrans or not args.support_dir):
+            logger.fatal("Error trying to detect FANUC base-dir: {0}".format(e))
+            logger.fatal("Please provide alternative locations for ktrans and support dir")
+            logger.fatal("Cannot continue, aborting")
+            sys.exit(_OS_EX_DATAERR)
+
+        # if both of those have been provided we don't care and can continue
+        logger.warn("Error trying to detect FANUC base-dir: {0}".format(e))
+        logger.warn("Continuing with provided arguments")
 
 
     # TODO: maybe generalise into 'find_tool(..)' or something (for maketp etc)
