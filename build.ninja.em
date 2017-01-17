@@ -60,12 +60,12 @@ rule ktrans_pc
   command = $cc_ktrans $
                -q $
                -MM -MP -MT $out -MF $out.d $
-               --ktrans=$plain_ktrans $
+               --ktrans="$plain_ktrans" $
                $lib_includes $
-               /I@(ktrans.support.path) $
+               /I"@(ktrans.support.path)" $
                $in $
                /ver @(ktrans.support.version_string) $
-               /config @(ws.robot_ini.path)
+               /config "@(ws.robot_ini.path)"
   depfile = $out.d
   deps = gcc
 
@@ -79,7 +79,7 @@ rule ktrans_pc
 
 @(pkg.manifest.name)_dir = @(pkg.location)
 @(pkg.manifest.name)_deps = @(str.join(' ', [d.manifest.name for d in pkg.dependencies]))
-@(pkg.manifest.name)_include_flags = @(str.join(' ', ['/I' + d for d in pkg.include_dirs]))
+@(pkg.manifest.name)_include_flags = @(str.join(' ', ['/I"{0}"'.format(d) for d in pkg.include_dirs]))
 
 @[for (src, obj) in pkg.objects]@
 build $build_dir\@(obj): ktrans_pc $@(pkg.manifest.name)_dir\@(src)
