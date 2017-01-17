@@ -56,8 +56,8 @@ command shell session. Usage and installation of `pip` is covered in
 ## Usage
 
 ```
-usage: rossum [-h] [-v] [-V] [-q] [-c ID] [-d] [--ktrans PATH]
-              [--ktransw PATH] [-n] [-p PATH] [-r INI] [-w]
+usage: rossum [-h] [-v] [-V] [-q] [-c ID] [--support PATH] [-d]
+              [--ktrans PATH] [--ktransw PATH] [-n] [-p PATH] [-r INI] [-w]
               SRC [BUILD]
 
 Version 0.1.2
@@ -76,6 +76,9 @@ optional arguments:
   -q, --quiet           Be quiet (only warnings and errors will be shown)
   -c, --core            Version of the core files used when translating
                         (default: V7.70-1)
+  --support             Location of KAREL support directory (default: auto-
+                        detect based on selected core version and FANUC
+                        registry keys)
   -d, --dry-run         Do everything except writing to Makefile
   --ktrans              Location of ktrans (default: auto-detect)
   --ktransw             Location of ktransw (default: assume it's on the
