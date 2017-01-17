@@ -22,7 +22,7 @@ build all targets in the correct order.
 The generated Ninja build files require a recent (> 1.7.1) version of [Ninja][]
 to be present.
 
-For translating Karel sources, `rossum` expects [ktransw][] version 0.2.0 or
+For translating Karel sources, `rossum` expects [ktransw][] version 0.2.2 or
 newer. Refer to the `ktransw` documentation for any additional requirements
 that `ktransw` may have.
 
