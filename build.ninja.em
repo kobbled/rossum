@@ -46,8 +46,6 @@
 ### build setup ################################################################
 
 build_dir = @(ws.build.path)
-cc_ktrans = @(ktransw.path)
-plain_ktrans = @(ktrans.path)
 
 
 ### build rules ################################################################
@@ -57,10 +55,10 @@ plain_ktrans = @(ktrans.path)
 # this rule always places the Karel support directory corresponding to the
 # runtime version on the include path, as that is a globally needed path.
 rule ktrans_pc
-  command = $cc_ktrans $
+  command = @(ktransw.path) $
                -q $
                -MM -MP -MT $out -MF $out.d $
-               --ktrans="$plain_ktrans" $
+               --ktrans="@(ktrans.path)" $
                $lib_includes $
                /I"@(ktrans.support.path)" $
                $in $
