@@ -32,9 +32,14 @@ actual build files.
 
 ## Installation
 
-Clone this repository to your machine and add the directory containing
-`rossum.py` and `rossum.cmd` to your `PATH`. Command sessions opened after
-setting up the `PATH` should be able to successfully run `rossum` from anywhere.
+The 0.1.4 release is a convenience release that includes all the necessary
+tools to quickly setup a working installation of rossum. Download it from the
+[releases][] page.
+
+Alternatively, clone this repository to your machine and add the directory
+containing `rossum.py` and `rossum.cmd` to your `PATH`. Command sessions
+opened after setting up the `PATH` should be able to successfully run `rossum`
+from anywhere.
 
 For installation of `ktransw`, see [ktransw][].
 
@@ -200,5 +205,6 @@ author of `rossum` is not affiliated with Fanuc in any way.
 [ninja]: https://ninja-build.org
 [ktransw]: https://github.com/gavanderhoorn/ktransw_py
 [EmPy]: https://pypi.python.org/pypi/EmPy
+[releases]: https://github.com/gavanderhoorn/rossum/releases
 [rossum_example_ws]: https://github.com/gavanderhoorn/rossum_example_ws
 [Installing Python on Windows]: http://docs.python-guide.org/en/latest/starting/install/win/
