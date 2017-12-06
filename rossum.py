@@ -686,12 +686,20 @@ def find_fr_install_dir(search_locs):
         import _winreg as wreg
 
         # find roboguide install dir
-        fr_key = wreg.OpenKey(wreg.HKEY_LOCAL_MACHINE, r'Software\FANUC', 0, wreg.KEY_READ)
+        fr_key = wreg.OpenKey(wreg.HKEY_LOCAL_MACHINE, r'Software\FANUC', 0,
+            # always use 32-bit registry view, even if this is a 64-bit
+            # Python, as Roboguide is a 32-bit application, so its keys
+            # are stored in the 32-bit view
+            wreg.KEY_READ | wreg.KEY_WOW64_32KEY)
         fr_install_dir = wreg.QueryValueEx(fr_key, "InstallDir")[0]
 
         # get roboguide version
         # TODO: this will fail if roboguide isn't installed
-        rg_key = wreg.OpenKey(wreg.HKEY_LOCAL_MACHINE, r'Software\FANUC\ROBOGUIDE', 0, wreg.KEY_READ)
+        rg_key = wreg.OpenKey(wreg.HKEY_LOCAL_MACHINE, r'Software\FANUC\ROBOGUIDE',
+            # always use 32-bit registry view, even if this is a 64-bit
+            # Python, as Roboguide is a 32-bit application, so its keys
+            # are stored in the 32-bit view
+            0, wreg.KEY_READ | wreg.KEY_WOW64_32KEY)
         rg_ver = wreg.QueryValueEx(rg_key, "Version")[0]
 
         logger.debug("Found Roboguide version: {0}".format(rg_ver))
