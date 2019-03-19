@@ -699,13 +699,13 @@ def find_fr_install_dir(search_locs, is32bit=False):
             sam_flags |= wreg.KEY_WOW64_32KEY
 
         # find roboguide install dir
-        fr_key = wreg.OpenKey(wreg.HKEY_LOCAL_MACHINE, r'Software\FANUC', 0, sam_flags)
-        fr_install_dir = wreg.QueryValueEx(fr_key, "InstallDir")[0]
+        with wreg.OpenKey(wreg.HKEY_LOCAL_MACHINE, r'Software\FANUC', 0, sam_flags) as fr_key:
+            fr_install_dir = wreg.QueryValueEx(fr_key, "InstallDir")[0]
 
         # get roboguide version
         # TODO: this will fail if roboguide isn't installed
-        rg_key = wreg.OpenKey(wreg.HKEY_LOCAL_MACHINE, r'Software\FANUC\ROBOGUIDE', 0, sam_flags)
-        rg_ver = wreg.QueryValueEx(rg_key, "Version")[0]
+        with wreg.OpenKey(wreg.HKEY_LOCAL_MACHINE, r'Software\FANUC\ROBOGUIDE', 0, sam_flags) as rg_key:
+            rg_ver = wreg.QueryValueEx(rg_key, "Version")[0]
 
         logger.debug("Found Roboguide version: {0}".format(rg_ver))
         if os.path.exists(os.path.join(fr_install_dir, 'Shared')):
