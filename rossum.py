@@ -48,6 +48,7 @@ KL_SUFFIX = 'kl'
 PCODE_SUFFIX = 'pc'
 
 ENV_PKG_PATH='ROSSUM_PKG_PATH'
+ENV_DEFAULT_CORE_VERSION='ROSSUM_CORE_VERSION'
 BUILD_FILE_NAME='build.ninja'
 BUILD_FILE_TEMPLATE_NAME='build.ninja.em'
 
@@ -163,8 +164,12 @@ def main():
     parser.add_argument('--rg32', action='store_true', dest='rg32',
         help='Assume 32-bit Roboguide version.')
     parser.add_argument('-c', '--core', type=str, dest='core_version',
-        metavar='ID', default=DEFAULT_CORE_VERSION, help="Version of "
-        "the core files used when translating (default: %(default)s)")
+        metavar='ID',
+        default=(os.environ.get(ENV_DEFAULT_CORE_VERSION) or DEFAULT_CORE_VERSION),
+        help="Version of the core files used when translating "
+        "(default: %(default)s). Use the '{0}' environment "
+        "variable to configure an alternative default without having to "
+        "specify it on each invocation of rossum.".format(ENV_DEFAULT_CORE_VERSION))
     parser.add_argument('--support', type=str, dest='support_dir',
         metavar='PATH', help="Location of KAREL support directory "
             "(default: auto-detect based on selected core version and "

@@ -80,8 +80,11 @@ optional arguments:
   -V, --version         show program's version number and exit
   -q, --quiet           Be quiet (only warnings and errors will be shown)
   --rg32                Assume 32-bit Roboguide version.
-  -c, --core            Version of the core files used when translating
-                        (default: V7.70-1)
+  -c ID, --core ID      Version of the core files used when translating
+                        (default: V7.70-1). Use the 'ROSSUM_CORE_VERSION'
+                        environment variable to configure an alternative
+                        default without having to specify it on each
+                        invocation of rossum
   --support             Location of KAREL support directory (default: auto-
                         detect based on selected core version and FANUC
                         registry keys)
