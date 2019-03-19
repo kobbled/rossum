@@ -89,7 +89,7 @@ optional arguments:
   --ktrans              Location of ktrans (default: auto-detect)
   --ktransw             Location of ktransw (default: assume it's on the
                         Windows PATH)
-  -n, --no-env          Do not search the KPKG_PATH, even if it is set
+  -n, --no-env          Do not search the ROSSUM_PKG_PATH, even if it is set
   -p, --pkg-dir         Additional paths to search for packages (multiple
                         allowed)
   -r, --robot-ini       Location of robot.ini (default: source dir)
