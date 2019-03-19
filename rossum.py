@@ -160,6 +160,8 @@ def main():
         version='%(prog)s {0}'.format(ROSSUM_VERSION))
     parser.add_argument('-q', '--quiet', action='store_true', dest='quiet',
         help='Be quiet (only warnings and errors will be shown)')
+    parser.add_argument('--rg32', action='store_true', dest='rg32',
+        help='Assume 32-bit Roboguide version.')
     parser.add_argument('-c', '--core', type=str, dest='core_version',
         metavar='ID', default=DEFAULT_CORE_VERSION, help="Version of "
         "the core files used when translating (default: %(default)s)")
@@ -267,7 +269,7 @@ def main():
 
     # try to find base directory for FANUC tools
     try:
-        fr_base_dir = find_fr_install_dir(search_locs=FANUC_SEARCH_PATH)
+        fr_base_dir = find_fr_install_dir(search_locs=FANUC_SEARCH_PATH, is32bit=args.rg32)
         logger.info("Using {} as FANUC software base directory".format(fr_base_dir))
     except Exception as e:
         # not being able to find the Fanuc base dir is only a problem if:
@@ -681,25 +683,23 @@ def gen_obj_mappings(pkgs):
             pkg.objects.append((src, obj))
 
 
-def find_fr_install_dir(search_locs):
+def find_fr_install_dir(search_locs, is32bit=False):
     try:
         import _winreg as wreg
 
+        # only use 32-bit registry view if requested. If Roboguide is a 32-bit
+        # application, its keys are stored in the 32-bit view.
+        sam_flags = wreg.KEY_READ
+        if is32bit:
+            sam_flags |= wreg.KEY_WOW64_32KEY
+
         # find roboguide install dir
-        fr_key = wreg.OpenKey(wreg.HKEY_LOCAL_MACHINE, r'Software\FANUC', 0,
-            # always use 32-bit registry view, even if this is a 64-bit
-            # Python, as Roboguide is a 32-bit application, so its keys
-            # are stored in the 32-bit view
-            wreg.KEY_READ | wreg.KEY_WOW64_32KEY)
+        fr_key = wreg.OpenKey(wreg.HKEY_LOCAL_MACHINE, r'Software\FANUC', 0, sam_flags)
         fr_install_dir = wreg.QueryValueEx(fr_key, "InstallDir")[0]
 
         # get roboguide version
         # TODO: this will fail if roboguide isn't installed
-        rg_key = wreg.OpenKey(wreg.HKEY_LOCAL_MACHINE, r'Software\FANUC\ROBOGUIDE',
-            # always use 32-bit registry view, even if this is a 64-bit
-            # Python, as Roboguide is a 32-bit application, so its keys
-            # are stored in the 32-bit view
-            0, wreg.KEY_READ | wreg.KEY_WOW64_32KEY)
+        rg_key = wreg.OpenKey(wreg.HKEY_LOCAL_MACHINE, r'Software\FANUC\ROBOGUIDE', 0, sam_flags)
         rg_ver = wreg.QueryValueEx(rg_key, "Version")[0]
 
         logger.debug("Found Roboguide version: {0}".format(rg_ver))

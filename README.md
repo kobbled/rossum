@@ -61,7 +61,7 @@ command shell session. Usage and installation of `pip` is covered in
 ## Usage
 
 ```
-usage: rossum [-h] [-v] [-V] [-q] [-c ID] [--support PATH] [-d]
+usage: rossum [-h] [-v] [-V] [-q] [--rg32] [-c ID] [--support PATH] [-d]
               [--ktrans PATH] [--ktransw PATH] [-n] [-p PATH] [-r INI] [-w]
               SRC [BUILD]
 
@@ -79,6 +79,7 @@ optional arguments:
   -v, --verbose         Be verbose
   -V, --version         show program's version number and exit
   -q, --quiet           Be quiet (only warnings and errors will be shown)
+  --rg32                Assume 32-bit Roboguide version.
   -c, --core            Version of the core files used when translating
                         (default: V7.70-1)
   --support             Location of KAREL support directory (default: auto-
