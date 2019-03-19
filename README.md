@@ -106,6 +106,26 @@ Usage example:
 ```
 
 
+## Environment variables
+
+`rossum` checks for the existence of two environment variables and uses their
+contents to change its behaviour.
+
+### ROSSUM_PKG_PATH
+
+The `ROSSUM_PKG_PATH` should contain (a) path(s) to one or more directories
+containing rossum packages. All directories will be searched.
+
+### ROSSUM_CORE_VERSION
+
+The `ROSSUM_CORE_VERSION` variable can be used to specify a 'system wide'
+default core version that should be used for all invocations of `ktransw`,
+unless the default is overriden using the `--core` option.
+
+Example: to make version 8.30 of the support files the default set
+`ROSSUM_CORE_VERSION` to `V8.30-1`.
+
+
 ## Examples
 
 Please see [rossum_example_ws][] for an example workspace with some packages
