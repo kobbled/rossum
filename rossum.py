@@ -275,6 +275,16 @@ def main():
             logger.fatal("Cannot find a {}, aborting".format(ROBOT_INI_NAME))
             sys.exit(_OS_EX_DATAERR)
 
+        # non-"empty" robot.ini files may conflict with rossum and/or ktransw
+        # CLAs. Ideally, we'd allow rossum/ktransw CLAs to override paths and
+        # other settings from robot.ini files, but for now we'll only just
+        # WARN the user if we find a non-empty file.
+        with open(robot_ini_loc, 'r') as f:
+            robot_ini_txt = f.read()
+            if ('Path' in robot_ini_txt) or ('Support' in robot_ini_txt):
+                logger.warn("Found {} contains potentially conflicting ktrans "
+                    "settings!".format(ROBOT_INI_NAME))
+
 
     # try to find base directory for FANUC tools
     try:
