@@ -715,7 +715,7 @@ def find_fr_install_dir(search_locs, is32bit=False):
     except WindowsError as we:
         logger.debug("Couldn't find FANUC registry key(s), trying other methods")
     except ImportError as ime:
-        logger.debug("Couldn't access Windows registry, trying other methods")
+        logger.debug("Couldn't import 'winreg' module, can't access Windows registry, trying other methods")
 
     # no windows registry, try looking in the file system
     logger.warn("Can't find FANUC base-dir using registry, switching to file-system search")
