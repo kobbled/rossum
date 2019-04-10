@@ -53,18 +53,18 @@ BUILD_FILE_NAME='build.ninja'
 BUILD_FILE_TEMPLATE_NAME='build.ninja.em'
 
 FANUC_SEARCH_PATH = [
-    'C:\\Program Files\\Fanuc',
-    'C:\\Program Files (x86)\\Fanuc',
-    'D:\\Program Files\\Fanuc',
-    'D:\\Program Files (x86)\\Fanuc',
+    'C:/Program Files/Fanuc',
+    'C:/Program Files (x86)/Fanuc',
+    'D:/Program Files/Fanuc',
+    'D:/Program Files (x86)/Fanuc',
 ]
 
 KTRANS_BIN_NAME='ktrans.exe'
 KTRANS_SEARCH_PATH = [
-    'C:\\Program Files\\Fanuc\\WinOLPC\\bin',
-    'C:\\Program Files (x86)\\Fanuc\\WinOLPC/bin',
-    'D:\\Program Files\\Fanuc\\WinOLPC\\bin',
-    'D:\\Program Files (x86)\\Fanuc\\WinOLPC/bin',
+    'C:/Program Files/Fanuc/WinOLPC/bin',
+    'C:/Program Files (x86)/Fanuc/WinOLPC/bin',
+    'D:/Program Files/Fanuc/WinOLPC/bin',
+    'D:/Program Files (x86)/Fanuc/WinOLPC/bin',
 ]
 
 KTRANSW_BIN_NAME='ktransw.cmd'
