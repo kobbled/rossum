@@ -288,7 +288,8 @@ def main():
         # exit with a fatal error if we're missing either of those
         if (not args.ktrans or not args.support_dir):
             logger.fatal("Error trying to detect FANUC base-dir: {0}".format(e))
-            logger.fatal("Please provide alternative locations for ktrans and support dir")
+            logger.fatal("Please provide alternative locations for ktrans and support dir using")
+            logger.fatal("the '--ktrans' and '--support' options.")
             logger.fatal("Cannot continue, aborting")
             sys.exit(_OS_EX_DATAERR)
 
