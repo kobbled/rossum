@@ -690,7 +690,7 @@ def gen_obj_mappings(pkgs):
 
 def find_fr_install_dir(search_locs, is32bit=False):
     try:
-        import _winreg as wreg
+        import winreg as wreg
 
         # only use 32-bit registry view if requested. If Roboguide is a 32-bit
         # application, its keys are stored in the 32-bit view.
