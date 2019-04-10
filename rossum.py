@@ -707,7 +707,7 @@ def find_fr_install_dir(search_locs, is32bit=False):
         with wreg.OpenKey(wreg.HKEY_LOCAL_MACHINE, r'Software\FANUC\ROBOGUIDE', 0, sam_flags) as rg_key:
             rg_ver = wreg.QueryValueEx(rg_key, "Version")[0]
 
-        logger.debug("Found Roboguide version: {0}".format(rg_ver))
+        logger.info("Found Roboguide version: {0}".format(rg_ver))
         if os.path.exists(os.path.join(fr_install_dir, 'Shared')):
             logger.debug("Most likely FANUC base-dir: {}".format(fr_install_dir))
             return fr_install_dir
