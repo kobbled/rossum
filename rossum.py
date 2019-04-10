@@ -19,7 +19,7 @@
 # rossum - a 'cmake for Fanuc Karel'
 #
 # Prerequisites:
-#  - Python 2.7.x
+#  - a recent Python version (2.7.x or 3.4.x)
 #  - ninja build system (https://ninja-build.org)
 #  - EmPy
 #

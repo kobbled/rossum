@@ -17,7 +17,8 @@ build all targets in the correct order.
 
 ## Requirements
 
-`rossum` is written in Python 2, so naturally it needs a Python 2 install.
+`rossum` was written on a Python 2 system, but user testing confirms it also
+works with Python 3.
 
 The generated Ninja build files require a recent (> 1.7.1) version of [Ninja][]
 to be present.
