@@ -85,19 +85,23 @@ optional arguments:
                         (default: V7.70-1). Use the 'ROSSUM_CORE_VERSION'
                         environment variable to configure an alternative
                         default without having to specify it on each
-                        invocation of rossum
-  --support             Location of KAREL support directory (default: auto-
+                        invocation of rossum.
+  --support PATH        Location of KAREL support directory (default: auto-
                         detect based on selected core version and FANUC
                         registry keys)
-  -d, --dry-run         Do everything except writing to Makefile
-  --ktrans              Location of ktrans (default: auto-detect)
-  --ktransw             Location of ktransw (default: assume it's on the
+  -d, --dry-run         Do everything except writing to build file
+  --ktrans PATH         Location of ktrans (default: auto-detect)
+  --ktransw PATH        Location of ktransw (default: assume it's on the
                         Windows PATH)
   -n, --no-env          Do not search the ROSSUM_PKG_PATH, even if it is set
-  -p, --pkg-dir         Additional paths to search for packages (multiple
-                        allowed)
-  -r, --robot-ini       Location of robot.ini (default: source dir)
-  -w, --overwrite       Overwrite any Makefile that may exist in the build dir
+  -p PATH, --pkg-dir PATH
+                        Additional paths to search for packages (multiple
+                        allowed). Note: this essentially extends the source
+                        space.
+  -r INI, --robot-ini INI
+                        Location of robot.ini (default: source dir)
+  -w, --overwrite       Overwrite any build file that may exist in the build
+                        dir
 
 Usage example:
 
