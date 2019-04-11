@@ -432,17 +432,15 @@ def main():
     all_pkgs.extend(other_pkgs)
     all_pkgs = remove_duplicates(all_pkgs)
 
-    # make sure all their dependencies are present
-    try:
-        check_pkg_dependencies(all_pkgs)
-    except Exception as e:
-        logger.fatal("Error occured while checking packages: {}. Cannot "
-            "continue".format(e))
-        # TODO: find appropriate exit code
-        sys.exit(_OS_EX_DATAERR)
+    # build out dependency trees
+    # for all packages in src_space
+    dependency_graph = create_dependency_graph(src_space_pkgs, all_pkgs)
+    #log dependency trees to logger
+    log_dep_tree(dependency_graph)
+    #filter out additional packages that are not dependencies
+    all_pkgs = filter_packages(all_pkgs, dependency_graph)
 
     # all discovered pkgs get used for dependency and include path resolution,
-    resolve_dependencies(all_pkgs)
     resolve_includes(all_pkgs)
 
     # but only the pkgs in the source space(s) get their objects build
@@ -615,24 +613,86 @@ def find_in_list(l, pred):
             return i
     return None
 
-def resolve_dependencies(pkgs):
-    """ Maps dependency pkg names to RossumPackage instances
+
+def create_dependency_graph(source_pkgs, all_pkgs):
     """
-    pkg_names = [p.manifest.name for p in pkgs]
+    Creates dependency graph for build
+    Maps dependency pkg names to RossumPackage instances
+    """
+    # debug: show user source packages to resolve dependencies for
+    pkg_names = [p.manifest.name for p in source_pkgs]
     logger.debug("Resolving dependencies for: {}".format(', '.join(pkg_names)))
-    for pkg in pkgs:
-        logger.debug("  {}".format(pkg.manifest.name))
 
-        for dep_pkg_name in pkg.manifest.depends:
-            dep_pkg = find_in_list(pkgs, lambda p: p.manifest.name == dep_pkg_name)
+    #start a dependency graph
+    dep_graph = Graph()
+    for pkg in source_pkgs:
+        # set to track visited packages to avoid circular referencing
+        visited = set()
+        # add to final_pkgs object
+        # set package as a root on dependency tree
+        dep_graph.setRoot(pkg.manifest.name, pkg.manifest.version)
+        # Search through dependencies and add to dep graph and to
+        # dependencies in RossumPackage collection
+        add_dependency(pkg, visited, dep_graph, all_pkgs)
+    
+    return dep_graph
 
-            # this should not be possible, as pkg dependency relationships
-            # should have been checked earlier, but you never know.
+def add_dependency(src_package, visited, graph, pkgs):
+    """
+    """
+    if src_package.manifest.name not in visited:
+        logger.debug("  {}:".format(src_package.manifest.name))
+        for depend_name in src_package.manifest.depends:
+            dep_pkg = find_in_list(pkgs, lambda p: p.manifest.name == depend_name)
             if dep_pkg is None:
                 raise MissingPkgDependency("Error finding internal pkg instance for '{}', "
-                    "can't find it".format(dep_pkg_name))
-            logger.debug("    {}: found".format(dep_pkg_name))
-            pkg.dependencies.append(dep_pkg)
+                    "can't find it".format(depend_name))
+            # add graph edge and put dependencies into RossumPackage Object
+            graph.addEdge(src_package.manifest.name, depend_name, dep_pkg.manifest.version, False)
+            logger.debug("    {}: found".format(depend_name))
+            src_package.dependencies.append(dep_pkg)
+            # after dependency has been added track to visited set to avoid circular dependencies
+            visited.add(src_package.manifest.name)
+            #if depend package has dependencies search for those as well
+            if len(dep_pkg.manifest.depends) > 0:
+                add_dependency(dep_pkg, visited, graph, pkgs)
+
+def log_dep_tree(graph):
+    """write depedency trees from source packages
+       to debug logger
+    """
+    pkg_names = [p.name for p in graph.root]
+    for name in pkg_names:
+        #print depedency tree for logger
+        logger.debug("Printing dependency tree for: {}".format(name))
+        depstring = graph.print_dependencies(name)
+        if depstring is not None:
+            ## split into seperate lines for debug logger
+            depstring = depstring.splitlines()
+            for line in depstring:
+                logger.debug("  {}".format(line))
+
+
+def filter_packages(pkgs, graph):
+    """filter out packages in RossumPackage that
+       are not in the dependency tree
+    """
+    #create new list to store applicable packages
+    filtered = []
+    #find all root packages in the source
+    pkg_names = [p.name for p in graph.root]
+    # track visited packages to avoid duplicates
+    visited = set()
+    for name in pkg_names:
+        #retrieve all packages the source package depends on
+        deps = graph.depthFirstSearch(name)
+        if len(deps) > 0:
+            for d in deps:
+                if d not in visited:
+                    filtered.append(find_in_list(pkgs, lambda p: p.manifest.name == d))
+                    visited.add(d)
+    # return filtered list of packages
+    return filtered
 
 
 def dedup(seq):
