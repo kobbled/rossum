@@ -263,7 +263,7 @@ def main():
     # check that it actually exists
     logger.debug("Checking: {}".format(robot_ini_loc))
     if not os.path.exists(robot_ini_loc):
-        logger.warn("No {} in CWD, and no alternative provided, trying "
+        logger.warning("No {} in CWD, and no alternative provided, trying "
             "source space".format(ROBOT_INI_NAME))
 
         robot_ini_loc = os.path.join(source_dir, ROBOT_INI_NAME)
@@ -271,7 +271,7 @@ def main():
         if os.path.exists(robot_ini_loc):
             logger.info("Found {} in source space".format(ROBOT_INI_NAME))
         else:
-            logger.warn("File does not exist: {}".format(robot_ini_loc))
+            logger.warning("File does not exist: {}".format(robot_ini_loc))
             logger.fatal("Cannot find a {}, aborting".format(ROBOT_INI_NAME))
             sys.exit(_OS_EX_DATAERR)
 
@@ -282,7 +282,7 @@ def main():
         with open(robot_ini_loc, 'r') as f:
             robot_ini_txt = f.read()
             if ('Path' in robot_ini_txt) or ('Support' in robot_ini_txt):
-                logger.warn("Found {} contains potentially conflicting ktrans "
+                logger.warning("Found {} contains potentially conflicting ktrans "
                     "settings!".format(ROBOT_INI_NAME))
 
 
@@ -304,8 +304,8 @@ def main():
             sys.exit(_OS_EX_DATAERR)
 
         # if both of those have been provided we don't care and can continue
-        logger.warn("Error trying to detect FANUC base-dir: {0}".format(e))
-        logger.warn("Continuing with provided arguments")
+        logger.warning("Error trying to detect FANUC base-dir: {0}".format(e))
+        logger.warning("Continuing with provided arguments")
 
 
     # TODO: maybe generalise into 'find_tool(..)' or something (for maketp etc)
@@ -581,7 +581,7 @@ def find_pkgs(dirs):
         except Exception as e:
             mfest_loc = os.path.join(os.path.split(
                 os.path.dirname(manifest_file_path))[1], os.path.basename(manifest_file_path))
-            logger.warn("Error parsing manifest {0}: {1}.".format(mfest_loc, e))
+            logger.warning("Error parsing manifest {0}: {1}.".format(mfest_loc, e))
 
     return pkgs
 
@@ -733,7 +733,7 @@ def find_fr_install_dir(search_locs, is64bit=False):
         logger.debug("Couldn't import 'winreg' module, can't access Windows registry, trying other methods")
 
     # no windows registry, try looking in the file system
-    logger.warn("Can't find FANUC base-dir using registry, switching to file-system search")
+    logger.warning("Can't find FANUC base-dir using registry, switching to file-system search")
 
     for search_loc in search_locs:
         logger.debug("Looking in '{0}'".format(search_loc))
@@ -742,7 +742,7 @@ def find_fr_install_dir(search_locs, is64bit=False):
             logger.debug("Found FANUC base-dir: {}".format(search_loc))
             return search_loc
 
-    logger.warn("Exhausted all methods to find FANUC base-dir")
+    logger.warning("Exhausted all methods to find FANUC base-dir")
     raise Exception("Can't find FANUC base-dir anywhere")
 
 
@@ -759,7 +759,7 @@ def find_ktrans(kbin_name, search_locs):
             logger.debug("Found {} in {}".format(kbin_name, ktrans_loc))
             return ktrans_path
 
-    logger.warn("Can't find ktrans anywhere")
+    logger.warning("Can't find ktrans anywhere")
     raise MissingKtransException("Can't find {} anywhere".format(kbin_name))
 
 
