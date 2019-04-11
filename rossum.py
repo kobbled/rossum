@@ -718,29 +718,29 @@ def resolve_includes(pkgs):
     """
     pkg_names = [p.manifest.name for p in pkgs]
     logger.debug("Resolving includes for: {}".format(', '.join(pkg_names)))
-
+    
     for pkg in pkgs:
-        # TODO: watch out for circular dependencies
+        visited = set()
         logger.debug("  {}".format(pkg.manifest.name))
-        # TODO: is dedup ok here? Doesn't change order of include dirs, but
-        #       does change the resulting include path
-        inc_dirs = dedup(resolve_includes_for_pkg(pkg))
+        inc_dirs = dedup(resolve_includes_for_pkg(pkg, visited))
         pkg.include_dirs.extend(inc_dirs)
         logger.debug("    added {} path(s)".format(len(inc_dirs)))
 
 
-def resolve_includes_for_pkg(pkg):
+def resolve_includes_for_pkg(pkg, visited):
     """ Recursively gather include directories for a specific package.
     Makes all include directories absolute as well.
     """
     inc_dirs = []
-    # include dirs of current pkg first
-    for inc_dir in pkg.manifest.includes:
-        abs_inc = os.path.abspath(os.path.join(pkg.location, inc_dir))
-        inc_dirs.append(abs_inc)
-    # then ask dependencies
-    for dep_pkg in pkg.dependencies:
-        inc_dirs.extend(resolve_includes_for_pkg(dep_pkg))
+    if pkg.manifest.name not in visited:
+        # include dirs of current pkg first
+        for inc_dir in pkg.manifest.includes:
+            abs_inc = os.path.abspath(os.path.join(pkg.location, inc_dir))
+            inc_dirs.append(abs_inc)
+        visited.add(pkg.manifest.name)
+        # then ask dependencies
+        for dep_pkg in pkg.dependencies:
+            inc_dirs.extend(resolve_includes_for_pkg(dep_pkg, visited))
     return inc_dirs
 
 
