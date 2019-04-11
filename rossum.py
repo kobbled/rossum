@@ -405,6 +405,7 @@ def main():
 
     # discover packages
     src_space_pkgs = find_pkgs(src_space_dirs)
+    src_space_pkgs = remove_duplicates(src_space_pkgs)
     logger.info("Found {0} package(s) in source space(s):".format(len(src_space_pkgs)))
     for pkg in src_space_pkgs:
         logger.info("  {0} (v{1})".format(pkg.manifest.name, pkg.manifest.version))
@@ -419,6 +420,7 @@ def main():
             logger.info('  {0}'.format(p))
 
         other_pkgs.extend(find_pkgs(other_pkg_dirs))
+        other_pkgs = remove_duplicates(other_pkgs)
         logger.info("Found {0} package(s) in other location(s):".format(len(other_pkgs)))
         for pkg in other_pkgs:
             logger.info("  {0} (v{1})".format(pkg.manifest.name, pkg.manifest.version))
@@ -428,6 +430,7 @@ def main():
     all_pkgs = []
     all_pkgs.extend(src_space_pkgs)
     all_pkgs.extend(other_pkgs)
+    all_pkgs = remove_duplicates(all_pkgs)
 
     # make sure all their dependencies are present
     try:
@@ -591,23 +594,19 @@ def find_pkgs(dirs):
 
     return pkgs
 
-
-def check_pkg_dependencies(pkgs):
-    """ make sure all dependencies are present
+def remove_duplicates(pkgs):
+    """create a seperate set with unique package names.
+       input list must be the format of the collection
+       RossumPackage.
     """
-    known_pkgs = [p.manifest.name for p in pkgs]
-    logger.debug("Checking dependencies for: {}".format(', '.join(known_pkgs)))
+    visited = set()
+    set_pkgs = []
     for pkg in pkgs:
-        logger.debug("  {0} - deps: {1}".format(
-            pkg.manifest.name,
-            ', '.join(pkg.manifest.depends) if len(pkg.manifest.depends) else 'none'))
-
-        missing = set(pkg.manifest.depends).difference(known_pkgs)
-        if len(missing) > 0:
-            raise MissingPkgDependency("Package {0} is missing dependencies: {1}"
-                .format(pkg.manifest.name, ', '.join(missing)))
-        else:
-            logger.debug("    satisfied")
+        if pkg.manifest.name not in visited:
+            visited.add(pkg.manifest.name)
+            set_pkgs.append(pkg)
+    
+    return set_pkgs
 
 
 def find_in_list(l, pred):
