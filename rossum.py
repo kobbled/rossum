@@ -201,6 +201,8 @@ def main():
         help="Location of {0} (default: source dir)".format(ROBOT_INI_NAME))
     parser.add_argument('-w', '--overwrite', action='store_true', dest='overwrite',
         help='Overwrite any build file that may exist in the build dir')
+    parser.add_argument('--buildall', action='store_true', dest='buildall',
+        help='build all objects source space depends on.')
     parser.add_argument('src_dir', type=str, metavar='SRC',
         help="Main directory with packages to build")
     parser.add_argument('build_dir', type=str, nargs='?', metavar='BUILD',
@@ -443,12 +445,18 @@ def main():
     # all discovered pkgs get used for dependency and include path resolution,
     resolve_includes(all_pkgs)
 
+    # select to just build source or all related packages
+    if args.buildall:
+        build_pkgs = all_pkgs
+    else: 
+        build_pkgs = src_space_pkgs
+
     # but only the pkgs in the source space(s) get their objects build
-    gen_obj_mappings(src_space_pkgs)
+    gen_obj_mappings(build_pkgs)
 
 
     # notify user of config
-    logger.info("Building {} package(s)".format(len(src_space_pkgs)))
+    logger.info("Building {} package(s)".format(len(build_pkgs)))
     logger.info("Build configuration:")
     logger.info("  source dir: {0}".format(source_dir))
     logger.info("  build dir : {0}".format(build_dir))
@@ -477,7 +485,7 @@ def main():
     robini_info = KtransRobotIniInfo(path=robot_ini_loc)
 
     ws = RossumWorkspace(build=bs_info, sources=sp_infos,
-        robot_ini=robini_info, pkgs=src_space_pkgs)
+        robot_ini=robini_info, pkgs=build_pkgs)
 
 
 
