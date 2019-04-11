@@ -134,6 +134,12 @@ RossumWorkspace = collections.namedtuple('RossumWorkspace',
     'sources'    #  - one or more 'source space(s)'
 )
 
+# container datatype for graph class
+packages = collections.namedtuple('packages',
+    'name '
+    'version '
+    'inSource'
+)
 
 
 
@@ -777,6 +783,98 @@ def find_ktrans_support_dir(fr_base_dir, version_string):
         .format(version_string))
 
 
+#Class to represent a graph 
+class Graph:
+
+    def __init__(self, root=None, version=None): 
+        self.graph = collections.defaultdict(list) #dictionary containing adjacency List
+        self.root = []
+        if root is not None and version is not None:
+            self.root.append(self.addPackage(root, version, True))
+
+    def __getitem__(self, key):
+        for next in self.root:
+            if next.name == key:
+                return next
+
+    def print_dependencies(self, rootname):
+        depList = ''
+        
+        stack = self.depthFirstSearch(rootname)
+        depList += '<{}> {} {x}\n'.format(rootname, self[rootname].version, x='*' if self[rootname].inSource else '')
+        stack.remove(rootname)
+
+        for next in self.graph[rootname]:
+            depList = self.depPrintRec(next, stack, '|-- ', depList)
+
+        return depList
+
+    def depPrintRec(self, pkg, stack, prepStr, outstr):
+        if pkg.name in stack:
+            outstr += prepStr + '<{}> {} {x}\n'.format(pkg.name, pkg.version, x='*' if pkg.inSource else '')
+            stack.remove(pkg.name)
+
+        for next in self.graph[pkg.name]:
+            if next.name in stack:
+                outstr = self.depPrintRec(next, stack, '|   ' + prepStr, outstr)
+
+        return outstr
+
+  
+    def addPackage(self, Name, Version, Source):
+        return packages(
+                name= Name,
+                version= Version,
+                inSource= Source)
+
+    def setRoot(self, name, version):
+        self.root.append(self.addPackage(name, version, True))
+
+    # function to add an edge to graph 
+    def addEdge(self, pNode, cNode, version, isSource):
+        self.graph[pNode].append(self.addPackage(cNode, version, isSource))
+
+    def depthFirstSearch(self, start, visited=None, stack=None):
+        if visited is None:
+            visited = set()
+        if stack is None:
+            stack = []
+            
+        stack.append(start)
+        visited.add(start)
+        
+        pkg_names = set([p.name for p in self.graph[start]])
+
+        difference = pkg_names - visited
+        for next in difference:
+            self.depthFirstSearch(next,visited, stack)
+        
+        return stack
+
+
+def graph_tests():
+    g= Graph()
+    g.setRoot("Hash", '1.0.0')
+    g.addEdge("Hash", "kUnit", '0.0.1', True)
+    g.addEdge("Hash", "Strings", '0.0.2', True)
+    g.addEdge("Strings", "errors", '0.0.3', False) 
+    g.addEdge("Strings", "kUnit", '0.0.4', True)
+    g.addEdge("kUnit", "Strings", '0.0.2', True)
+    g.addEdge("errors", "registers", '0.0.1', False)
+    g.addEdge("errors", "kUnit", '0.0.4', True)
+
+    g.setRoot("ioFile", '1.0.0')
+    g.addEdge("ioFile", "Strings", '0.0.2', True)
+
+
+    # depth first search hierarchy
+    dep = g.depthFirstSearch("Hash")
+    print(dep)
+    dep = g.depthFirstSearch("ioFile")
+    print(dep)
+    # Print dependency graph
+    print(g.print_dependencies("Hash"))
+    print(g.print_dependencies("ioFile"))
 
 
 if __name__ == '__main__':
