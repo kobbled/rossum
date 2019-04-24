@@ -425,7 +425,7 @@ def main():
         other_pkgs = remove_duplicates(other_pkgs)
         logger.info("Found {0} package(s) in other location(s):".format(len(other_pkgs)))
         for pkg in other_pkgs:
-            logger.info("  {0} (v{1})".format(pkg.manifest.name, pkg.manifest.version))
+            logger.debug("  {0} (v{1})".format(pkg.manifest.name, pkg.manifest.version))
 
 
     # process all discovered pkgs
