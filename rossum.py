@@ -203,6 +203,8 @@ def main():
         help='Overwrite any build file that may exist in the build dir')
     parser.add_argument('--buildall', action='store_true', dest='buildall',
         help='build all objects source space depends on.')
+    parser.add_argument('--keepgpp', action='store_true', dest='keepgpp',
+        help='build all objects source space depends on.')
     parser.add_argument('src_dir', type=str, metavar='SRC',
         help="Main directory with packages to build")
     parser.add_argument('build_dir', type=str, nargs='?', metavar='BUILD',
@@ -425,7 +427,7 @@ def main():
         other_pkgs = remove_duplicates(other_pkgs)
         logger.info("Found {0} package(s) in other location(s):".format(len(other_pkgs)))
         for pkg in other_pkgs:
-            logger.debug("  {0} (v{1})".format(pkg.manifest.name, pkg.manifest.version))
+            logger.info("  {0} (v{1})".format(pkg.manifest.name, pkg.manifest.version))
 
 
     # process all discovered pkgs
@@ -488,6 +490,11 @@ def main():
         robot_ini=robini_info, pkgs=build_pkgs)
 
 
+    #if --keepgpp is set insert flag into ktrans call in
+    # build.ninja.em so that temp builds in %TEMP% are kept
+    keep_buildd = ''
+    if args.keepgpp:
+        keep_buildd = '-k'
 
     # don't overwrite existing files, unless instructed to do so
     if (not args.overwrite) and os.path.exists(build_file_path):
@@ -505,6 +512,7 @@ def main():
             'ktransw'        : ktransw,
             'rossum_version' : ROSSUM_VERSION,
             'tstamp'         : datetime.datetime.now().isoformat(),
+            'keepgpp'        : keep_buildd,
         }
 
         interp = em.Interpreter(

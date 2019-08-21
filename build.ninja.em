@@ -56,7 +56,7 @@ build_dir = @(ws.build.path)
 # runtime version on the include path, as that is a globally needed path.
 rule ktrans_pc
   command = @(ktransw.path) $
-               -q $
+               -q @(keepgpp) $
                -MM -MP -MT $out -MF $out.d $
                --ktrans="@(ktrans.path)" $
                $lib_includes $
