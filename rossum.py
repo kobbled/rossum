@@ -30,6 +30,7 @@ import datetime
 import os
 import sys
 import json
+import configparser
 import fnmatch
 
 import collections
@@ -137,7 +138,18 @@ RossumWorkspace = collections.namedtuple('RossumWorkspace',
     'sources'    #  - one or more 'source space(s)'
 )
 
-
+#container for contents of ini file
+robotiniInfo = collections.namedtuple('robotiniInfo',
+    'robot '
+    'version '
+    'base_path ' #base_path designates the base directory where WinOLPC
+                 # or roboguide is installed eg. C:\Program Files (x86)\Fanuc\
+    'version_path ' #version path is where applications for specified version are stored
+                    # eg. C:\Program Files (x86)\Fanuc\WinOLPC\Versions\V910-1\bin
+    'support '
+    'output '
+    'ftp' # ftp address where the robot server resides
+    )
 
 
 
@@ -202,6 +214,8 @@ def main():
         default= os.environ.get(ENV_SERVER_IP),
         help='send to ip address specified.'
         'This will override env variable, {0}.'.format(ENV_SERVER_IP))
+    parser.add_argument('-o', '--override', action='store_true', dest='override_ini',
+        help='override robot.ini file directories with specified paths')
     parser.add_argument('src_dir', type=str, metavar='SRC',
         help="Main directory with packages to build")
     parser.add_argument('build_dir', type=str, nargs='?', metavar='BUILD',
@@ -256,42 +270,16 @@ def main():
         # TODO: find appropriate exit code
         sys.exit(_OS_EX_DATAERR)
 
+    #find robot.ini file
+    robot_ini_loc = find_robotini(source_dir, args)
+    #parse robot.ini file into collection tuple 'robotiniInfo'
+    robot_ini_info = parse_robotini(robot_ini_loc)
 
-    # check we can find a usable robot.ini somewhere.
-    # strategy:
-    #  - if user provided a location, use that
-    #  - if not, try CWD (default value of arg is relative to CWD)
-    #  - if that doesn't work, try source space
-
-    # because 'args.robot_ini' has a default which is simply 'robot.ini', we
-    # cover the first two cases in the above list with this single statement
-    robot_ini_loc = os.path.abspath(args.robot_ini)
-
-    # check that it actually exists
-    logger.debug("Checking: {}".format(robot_ini_loc))
-    if not os.path.exists(robot_ini_loc):
-        logger.warning("No {} in CWD, and no alternative provided, trying "
-            "source space".format(ROBOT_INI_NAME))
-
-        robot_ini_loc = os.path.join(source_dir, ROBOT_INI_NAME)
-        logger.debug("Checking: {}".format(robot_ini_loc))
-        if os.path.exists(robot_ini_loc):
-            logger.info("Found {} in source space".format(ROBOT_INI_NAME))
-        else:
-            logger.warning("File does not exist: {}".format(robot_ini_loc))
-            logger.fatal("Cannot find a {}, aborting".format(ROBOT_INI_NAME))
-            sys.exit(_OS_EX_DATAERR)
-
-        # non-"empty" robot.ini files may conflict with rossum and/or ktransw
-        # CLAs. Ideally, we'd allow rossum/ktransw CLAs to override paths and
-        # other settings from robot.ini files, but for now we'll only just
-        # WARN the user if we find a non-empty file.
-        with open(robot_ini_loc, 'r') as f:
-            robot_ini_txt = f.read()
-            if ('Path' in robot_ini_txt) or ('Support' in robot_ini_txt):
-                logger.warning("Found {} contains potentially conflicting ktrans "
-                    "settings!".format(ROBOT_INI_NAME))
-
+    #add base path to fanuc search paths
+    search_locs = []
+        
+    search_locs.append(robot_ini_info.base_path)
+    search_locs.extend(FANUC_SEARCH_PATH)
 
     # try to find base directory for FANUC tools
     try:
@@ -469,10 +457,27 @@ def main():
     # Template processing
     #
 
+    configs = {}
+    #support directory
+    configs['support'] = fr_support_dir
+    # set core version
+    configs['version'] = args.core_version
+    # set ip address to upload files to
+    configs['ftp'] = args.server_ip
+
+    # update struct if not using robot.ini presets
+    if args.override_ini:
+        configs['support'] = robot_ini_info.support
+        # set core version
+        configs['version'] = robot_ini_info.version
+        # set ip address to upload files to
+        configs['ftp'] = robot_ini_info.ftp
+
+
     # populate dicts & lists needed by template
     ktrans = KtransInfo(path=ktrans_path, support=KtransSupportDirInfo(
-        path=fr_support_dir,
-        version_string=args.core_version))
+        path=configs['support'],
+        version_string=configs['version']))
     ktransw = KtransWInfo(path=ktransw_path)
     bs_info = RossumSpaceInfo(path=build_dir)
     sp_infos = [RossumSpaceInfo(path=p) for p in src_space_dirs]
@@ -480,9 +485,6 @@ def main():
 
     ws = RossumWorkspace(build=bs_info, sources=sp_infos,
         robot_ini=robini_info, pkgs=src_space_pkgs)
-
-    # set ip address to upload files to
-    server_ip = args.server_ip
 
     # don't overwrite existing files, unless instructed to do so
     if (not args.overwrite) and os.path.exists(build_file_path):
@@ -498,7 +500,7 @@ def main():
         'ktransw'        : ktransw,
         'rossum_version' : ROSSUM_VERSION,
         'tstamp'         : datetime.datetime.now().isoformat(),
-        'ip'             : server_ip
+        'ip'             : configs['ftp']
     }
     # write out ninja template
     ninja_fl = open(build_file_path, 'w')
@@ -794,6 +796,90 @@ def find_ktrans_support_dir(fr_base_dir, version_string):
 
     raise Exception("Can't determine ktrans support dir for core version {}"
         .format(version_string))
+
+#---- Parse robot.ini file ----
+#####
+def find_robotini(source_dir, args):
+    """
+      check we can find a usable robot.ini somewhere.
+      strategy:
+        - if user provided a location, use that
+        - if not, try CWD (default value of arg is relative to CWD)
+        - if that doesn't work, try source space
+    """
+
+    # because 'args.robot_ini' has a default which is simply 'robot.ini', we
+    # cover the first two cases in the above list with this single statement
+    robot_ini_loc = os.path.abspath(args.robot_ini)
+
+    # check that it actually exists
+    logger.debug("Checking: {}".format(robot_ini_loc))
+    if not os.path.exists(robot_ini_loc):
+        logger.warn("No {} in CWD, and no alternative provided, trying "
+            "source space".format(ROBOT_INI_NAME))
+
+        robot_ini_loc = os.path.join(source_dir, ROBOT_INI_NAME)
+        logger.debug("Checking: {}".format(robot_ini_loc))
+        if os.path.exists(robot_ini_loc):
+            logger.info("Found {} in source space".format(ROBOT_INI_NAME))
+        else:
+            logger.warn("File does not exist: {}".format(robot_ini_loc))
+            logger.fatal("Cannot find a {}, aborting".format(ROBOT_INI_NAME))
+            sys.exit(_OS_EX_DATAERR)
+        
+        # non-"empty" robot.ini files may conflict with rossum and/or ktransw
+        # CLAs. Ideally, we'd allow rossum/ktransw CLAs to override paths and
+        # other settings from robot.ini files, but for now we'll only just
+        # WARN the user if we find a non-empty file.
+        with open(robot_ini_loc, 'r') as f:
+            robot_ini_txt = f.read()
+            if ('Path' in robot_ini_txt) or ('Support' in robot_ini_txt):
+                logger.warning("Found {} contains potentially conflicting ktrans "
+                    "settings!".format(ROBOT_INI_NAME))
+    
+    return robot_ini_loc
+
+def parse_robotini(fpath):
+    config = configparser.ConfigParser()
+    config.read(fpath)
+
+    # check that ini file has proper section
+    if not 'WinOLPC_Util' in config:
+        logger.fatal("Not a robot.ini file. Missing ['WinOLPC_Util'] section.")
+        logger.fatal("Re-export robot.ini file from setrobot.exe. Aborting.")
+        sys.exit(_OS_EX_DATAERR)
+
+    #get rid of slashes in front and behind of drive letter (i.e. \\C\\ -> C:\\)
+    config['WinOLPC_Util']['Robot'] = config['WinOLPC_Util']['Robot'][1] + ':' + config['WinOLPC_Util']['Robot'][2:]
+
+    #try to add a base path to use to find ktrans.exe and roboguide
+    # if WinOLPC folder is not found ignore a path for base_path.
+    try:
+        config['WinOLPC_Util']['Base_Path'] = config['WinOLPC_Util']['Path'].split("\\WinOLPC")[0]
+    except:
+        config['WinOLPC_Util']['Base_Path'] = ""
+        pass
+
+    #check that paths in robot.ini file exist. 
+    ## ignore version as its not a path
+    ## ignore outfile as does not matter for rossum or ktransw
+    for k,v in config['WinOLPC_Util'].items():
+        if (k == 'robot' or k == 'path' or k == 'support') and not os.path.exists(v):
+            logger.fatal("Directory '{0}' in robot.ini does not exist. Aborting".format(v))
+            sys.exit(_OS_EX_DATAERR)
+
+    # handle added 'ftp' key if omitted
+    if "Ftp" not in config['WinOLPC_Util']:
+        config['WinOLPC_Util']['Ftp'] = os.environ.get(ENV_SERVER_IP)
+
+    return robotiniInfo(
+        robot=config['WinOLPC_Util']['Robot'],
+        version=config['WinOLPC_Util']['Version'],
+        base_path=config['WinOLPC_Util']['Base_Path'],
+        version_path=config['WinOLPC_Util']['Path'],
+        support=config['WinOLPC_Util']['Support'],
+        output=config['WinOLPC_Util']['Output'],
+        ftp=config['WinOLPC_Util']['Ftp'])
 
 
 
