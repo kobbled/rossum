@@ -49,8 +49,11 @@ PCODE_SUFFIX = 'pc'
 
 ENV_PKG_PATH='ROSSUM_PKG_PATH'
 ENV_DEFAULT_CORE_VERSION='ROSSUM_CORE_VERSION'
+ENV_SERVER_IP='ROSSUM_SERVER_IP'
 BUILD_FILE_NAME='build.ninja'
 BUILD_FILE_TEMPLATE_NAME='build.ninja.em'
+FTP_FILE_NAME='ftp.txt'
+FTP_FILE_TEMPLATE_NAME='ftp.txt.em'
 
 FANUC_SEARCH_PATH = [
     'C:/Program Files/Fanuc',
@@ -195,6 +198,10 @@ def main():
         help="Location of {0} (default: source dir)".format(ROBOT_INI_NAME))
     parser.add_argument('-w', '--overwrite', action='store_true', dest='overwrite',
         help='Overwrite any build file that may exist in the build dir')
+    parser.add_argument('--ftp', action='store_true', dest='server_ip',
+        default= os.environ.get(ENV_SERVER_IP),
+        help='send to ip address specified.'
+        'This will override env variable, {0}.'.format(ENV_SERVER_IP))
     parser.add_argument('src_dir', type=str, metavar='SRC',
         help="Main directory with packages to build")
     parser.add_argument('build_dir', type=str, nargs='?', metavar='BUILD',
@@ -371,8 +378,10 @@ def main():
 
     # template and output file locations
     template_dir  = os.path.dirname(os.path.realpath(__file__))
-    template_path = os.path.join(template_dir, BUILD_FILE_TEMPLATE_NAME)
+    template_path = os.path.join(template_dir, BUILD_FILE_TEMPLATE_NAME) # for ninja file
     build_file_path = os.path.join(build_dir, BUILD_FILE_NAME)
+    template_ftp_path = os.path.join(template_dir, FTP_FILE_TEMPLATE_NAME) # for ftp
+    ftp_file_path = os.path.join(build_dir, FTP_FILE_NAME)
 
     # check
     if not os.path.isfile(template_path):
@@ -472,7 +481,8 @@ def main():
     ws = RossumWorkspace(build=bs_info, sources=sp_infos,
         robot_ini=robini_info, pkgs=src_space_pkgs)
 
-
+    # set ip address to upload files to
+    server_ip = args.server_ip
 
     # don't overwrite existing files, unless instructed to do so
     if (not args.overwrite) and os.path.exists(build_file_path):
@@ -481,26 +491,33 @@ def main():
         # TODO: find appropriate exit code
         sys.exit(_OS_EX_DATAERR)
 
-    # write out template
-    with open(build_file_path, 'w') as ofile:
-        # setup the dict for empy
-        globls = {
-            'ws'             : ws,
-            'ktrans'         : ktrans,
-            'ktransw'        : ktransw,
-            'rossum_version' : ROSSUM_VERSION,
-            'tstamp'         : datetime.datetime.now().isoformat(),
-        }
-
-        interp = em.Interpreter(
-            output=ofile, globals=globls,
+    #store globals in container to be passed by empy
+    globls = {
+        'ws'             : ws,
+        'ktrans'         : ktrans,
+        'ktransw'        : ktransw,
+        'rossum_version' : ROSSUM_VERSION,
+        'tstamp'         : datetime.datetime.now().isoformat(),
+        'ip'             : server_ip
+    }
+    # write out ninja template
+    ninja_fl = open(build_file_path, 'w')
+    ninja_interp = em.Interpreter(
+            output=ninja_fl, globals=dict(globls),
             options={em.RAW_OPT : True, em.BUFFERED_OPT : True})
-
-        # load and process the template
-        logger.debug("Processing template")
-        interp.file(open(template_path))
-        logger.debug("Shutting down empy")
-        interp.shutdown()
+    # write out ftp template
+    ftp_fl = open(ftp_file_path, 'w')
+    ftp_interp = em.Interpreter(
+            output=ftp_fl, globals=dict(globls),
+            options={em.RAW_OPT : True, em.BUFFERED_OPT : True})
+    # load and process the template
+    logger.debug("Processing template")
+    ninja_interp.file(open(template_path))
+    ftp_interp.file(open(template_ftp_path))
+    # shutdown empy interpreters
+    logger.debug("Shutting down empy")
+    ninja_interp.shutdown()
+    ftp_interp.shutdown()
 
 
     # done
