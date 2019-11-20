@@ -67,6 +67,14 @@ rule ktrans_pc
   depfile = $out.d
   deps = gcc
 
+# .ls -> .tp
+#
+# Run ls files through
+rule maketp_tp
+  command = @(tools['maketp']['path']) $
+               $in $
+               /config "@(ws.robot_ini.path)"
+
 
 ### build statements ###########################################################
 
@@ -80,7 +88,10 @@ rule ktrans_pc
 @(pkg.manifest.name)_include_flags = @(str.join(' ', ['/I"{0}"'.format(d) for d in pkg.include_dirs]))
 
 @[for (src, obj) in pkg.objects]@
-build $build_dir\@(obj): ktrans_pc $@(pkg.manifest.name)_dir\@(src)
+build $build_dir\@(obj): @
+@[if '.kl' in src]@ ktrans_pc @[end if]@ @
+@[if '.ls' in src]@ maketp_tp @[end if]@ @
+$@(pkg.manifest.name)_dir\@(src)
   lib_includes = $@(pkg.manifest.name)_include_flags
   description = @(pkg.manifest.name) :: @(src)
 

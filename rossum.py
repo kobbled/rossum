@@ -46,33 +46,37 @@ _OS_EX_DATAERR=65
 
 KL_SUFFIX = 'kl'
 PCODE_SUFFIX = 'pc'
+TP_SUFFIX = 'ls'
+TPCODE_SUFFIX = 'tp'
 
 ENV_PKG_PATH='ROSSUM_PKG_PATH'
 ENV_DEFAULT_CORE_VERSION='ROSSUM_CORE_VERSION'
 ENV_SERVER_IP='ROSSUM_SERVER_IP'
+
 BUILD_FILE_NAME='build.ninja'
 BUILD_FILE_TEMPLATE_NAME='build.ninja.em'
+
 FTP_FILE_NAME='ftp.txt'
 FTP_FILE_TEMPLATE_NAME='ftp.txt.em'
 
 FANUC_SEARCH_PATH = [
-    'C:/Program Files/Fanuc',
-    'C:/Program Files (x86)/Fanuc',
-    'D:/Program Files/Fanuc',
-    'D:/Program Files (x86)/Fanuc',
+    'C:\\Program Files\\Fanuc',
+    'C:\\Program Files (x86)\\Fanuc',
+    'D:\\Program Files\\Fanuc',
+    'D:\\Program Files (x86)\\Fanuc',
 ]
 
 KTRANS_BIN_NAME='ktrans.exe'
+KTRANSW_BIN_NAME='ktransw.cmd'
+MAKETP_BIN_NAME='maketp.exe'
+
 KTRANS_SEARCH_PATH = [
-    'C:/Program Files/Fanuc/WinOLPC/bin',
-    'C:/Program Files (x86)/Fanuc/WinOLPC/bin',
-    'D:/Program Files/Fanuc/WinOLPC/bin',
-    'D:/Program Files (x86)/Fanuc/WinOLPC/bin',
+    'C:\\Program Files\\Fanuc\\WinOLPC\\bin',
+    'C:\\Program Files (x86)\\Fanuc\\WinOLPC\\bin',
+    'D:\\Program Files\\Fanuc\\WinOLPC\\bin',
+    'D:\\Program Files (x86)\\Fanuc\\WinOLPC\\bin',
 ]
 
-KTRANSW_BIN_NAME='ktransw.cmd'
-
-MAKETP_NAME='maketp.exe'
 ROBOT_INI_NAME='robot.ini'
 
 MANIFEST_VERSION=1
@@ -183,8 +187,6 @@ def main():
             "FANUC registry keys)")
     parser.add_argument('-d', '--dry-run', action='store_true', dest='dry_run',
         help='Do everything except writing to build file')
-    parser.add_argument('--ktrans', type=str, dest='ktrans', metavar='PATH',
-        help="Location of ktrans (default: auto-detect)")
     parser.add_argument('--ktransw', type=str, dest='ktransw', metavar='PATH',
         help="Location of ktransw (default: assume it's on the Windows PATH)")
     parser.add_argument('-n', '--no-env', action='store_true', dest='no_env',
@@ -298,53 +300,30 @@ def main():
         fr_base_dir = find_fr_install_dir(search_locs=FANUC_SEARCH_PATH, is64bit=args.rg64)
         logger.info("Using {} as FANUC software base directory".format(fr_base_dir))
     except Exception as e:
-        # not being able to find the Fanuc base dir is only a problem if:
-        #  1) no ktrans.exe location provided
-        #  2) no support dir location provided
-        #
-        # exit with a fatal error if we're missing either of those
-        if (not args.ktrans or not args.support_dir):
+        # not being able to find the Fanuc base dir is a fatal error
+        # without a base directory roboguide is most likely not installed
+        # on the system, and ktrans, and maketp will not work without a
+        # workcell emulation.
             logger.fatal("Error trying to detect FANUC base-dir: {0}".format(e))
-            logger.fatal("Please provide alternative locations for ktrans and support dir using")
-            logger.fatal("the '--ktrans' and '--support' options.")
+            logger.fatal("Please make sure that roboguide, or OlpcPRO are installed.")
             logger.fatal("Cannot continue, aborting")
             sys.exit(_OS_EX_DATAERR)
 
-        # if both of those have been provided we don't care and can continue
-        logger.warning("Error trying to detect FANUC base-dir: {0}".format(e))
-        logger.warning("Continuing with provided arguments")
-
-
-    # TODO: maybe generalise into 'find_tool(..)' or something (for maketp etc)
-    # see if we need to find ktrans ourselves
-    ktrans_path = KTRANS_BIN_NAME
-    if not args.ktrans:
-        logger.debug("Trying to auto-detect ktrans location ..")
-
-        try:
-            search_locs = [fr_base_dir]
-            search_locs.extend(KTRANS_SEARCH_PATH)
-            ktrans_path = find_ktrans(kbin_name=KTRANS_BIN_NAME, search_locs=search_locs)
-        except MissingKtransException as mke:
-            logger.fatal("Aborting: {0}".format(mke))
-            sys.exit(_OS_EX_DATAERR)
-        except Exception as e:
-            logger.fatal("Aborting: {0} (unhandled, please report)".format(e))
-            sys.exit(_OS_EX_DATAERR)
-    # or if user provided its location
-    else:
-        logger.debug("User provided ktrans location: {0}".format(args.ktrans))
-        ktrans_path = os.path.abspath(args.ktrans)
-        logger.debug("Setting ktrans path to: {0}".format(ktrans_path))
-
-        # make sure it exists
-        if not os.path.exists(ktrans_path):
-            logger.fatal("Specified ktrans location ({0}) does not exist. "
-                "Aborting.".format(ktrans_path))
-            sys.exit(_OS_EX_DATAERR)
-
-    logger.info("ktrans location: {0}".format(ktrans_path))
-
+    #make list of tool names
+    tools = [KTRANS_BIN_NAME, KTRANSW_BIN_NAME, MAKETP_BIN_NAME]
+    # preset list of paths to search for paths
+    search_locs = []
+    search_locs.extend(KTRANS_SEARCH_PATH)
+    # add environment path to search
+    search_locs.extend([p for p in os.environ['Path'].split(os.pathsep) if len(p) > 0])
+    #find build tools
+    path_lst = find_tools(search_locs, tools, args)
+    # put list into dictionary for file type build rule
+    tool_paths = {
+        'ktrans' : {'from_suffix' : '0', 'to_suffix' : '0', 'path' : path_lst[0]},
+        'ktransw' : {'from_suffix' : KL_SUFFIX, 'to_suffix' : PCODE_SUFFIX, 'path' : (args.ktransw or path_lst[1])},
+        'maketp' : {'from_suffix' : TP_SUFFIX, 'to_suffix' : TPCODE_SUFFIX, 'path' : path_lst[2]}
+    }
 
     # try to find support directory for selected core software version
     logger.info("Setting default system core version to: {}".format(args.core_version))
@@ -369,11 +348,6 @@ def main():
             sys.exit(_OS_EX_DATAERR)
 
     logger.info("Karel core support dir: {}".format(fr_support_dir))
-
-
-    # if user didn't supply an alternative, assume it's on the PATH
-    ktransw_path = args.ktransw or KTRANSW_BIN_NAME
-    logger.info("ktransw location: {0}".format(ktransw_path))
 
 
     # template and output file locations
@@ -446,7 +420,7 @@ def main():
     resolve_includes(all_pkgs)
 
     # but only the pkgs in the source space(s) get their objects build
-    gen_obj_mappings(src_space_pkgs)
+    gen_obj_mappings(src_space_pkgs, tool_paths)
 
 
     # notify user of config
@@ -470,10 +444,10 @@ def main():
     #
 
     # populate dicts & lists needed by template
-    ktrans = KtransInfo(path=ktrans_path, support=KtransSupportDirInfo(
+    ktrans = KtransInfo(path=tool_paths['ktrans']['path'], support=KtransSupportDirInfo(
         path=fr_support_dir,
         version_string=args.core_version))
-    ktransw = KtransWInfo(path=ktransw_path)
+    ktransw = KtransWInfo(path=tool_paths['ktransw']['path'])
     bs_info = RossumSpaceInfo(path=build_dir)
     sp_infos = [RossumSpaceInfo(path=p) for p in src_space_dirs]
     robini_info = KtransRobotIniInfo(path=robot_ini_loc)
@@ -498,7 +472,8 @@ def main():
         'ktransw'        : ktransw,
         'rossum_version' : ROSSUM_VERSION,
         'tstamp'         : datetime.datetime.now().isoformat(),
-        'ip'             : server_ip
+        'ip'             : server_ip,
+        'tools'          : tool_paths
     }
     # write out ninja template
     ninja_fl = open(build_file_path, 'w')
@@ -698,7 +673,7 @@ def resolve_includes_for_pkg(pkg, visited):
     return inc_dirs
 
 
-def gen_obj_mappings(pkgs):
+def gen_obj_mappings(pkgs, mappings):
     """ Updates the 'objects' member variable of each pkg with tuples of the
     form (path\to\a.kl, a.pc).
     """
@@ -710,14 +685,18 @@ def gen_obj_mappings(pkgs):
 
         for src in pkg.manifest.source:
             src = src.replace('/', '\\')
-            obj = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], PCODE_SUFFIX)
+            for (k, v) in mappings.items():
+                if v['from_suffix'] in src:
+                    obj = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['to_suffix'])
             logger.debug("    adding: {} -> {}".format(src, obj))
             pkg.objects.append((src, obj))
 
         # TODO: refactor this: make test rule generation optional
         for src in pkg.manifest.tests:
             src = src.replace('/', '\\')
-            obj = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], PCODE_SUFFIX)
+            for (k, v) in mappings.items():
+                if v['from_suffix'] in src:
+                    obj = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['to_suffix'])
             logger.debug("    adding: {} -> {}".format(src, obj))
             pkg.objects.append((src, obj))
 
@@ -764,23 +743,14 @@ def find_fr_install_dir(search_locs, is64bit=False):
     logger.warning("Exhausted all methods to find FANUC base-dir")
     raise Exception("Can't find FANUC base-dir anywhere")
 
-
-def find_ktrans(kbin_name, search_locs):
-    # TODO: check PATH first
-
+def find_program(tool, search_locs):
     for search_loc in search_locs:
-        # see if it is in the default location
-        ktrans_loc = os.path.join(search_loc, 'WinOLPC', 'bin')
-        ktrans_path = os.path.join(ktrans_loc, kbin_name)
-
-        logger.debug("Looking in {} ..".format(ktrans_loc))
-        if os.path.exists(ktrans_path):
-            logger.debug("Found {} in {}".format(kbin_name, ktrans_loc))
-            return ktrans_path
-
-    logger.warning("Can't find ktrans anywhere")
-    raise MissingKtransException("Can't find {} anywhere".format(kbin_name))
-
+        path = os.path.join(search_loc, tool)
+        if os.path.exists(path):
+            return path
+    
+    logger.warning("Can't find {} anywhere".format(tool))
+    raise MissingKtransException("Can't find {} anywhere".format(tool))
 
 def find_ktrans_support_dir(fr_base_dir, version_string):
     logger.debug('Trying to find support dir for core version: {}'.format(version_string))
@@ -794,6 +764,22 @@ def find_ktrans_support_dir(fr_base_dir, version_string):
 
     raise Exception("Can't determine ktrans support dir for core version {}"
         .format(version_string))
+
+def find_tools(search_locs, tools, args):
+    tool_paths =[]
+    for tool in tools:
+        try:
+            tool_path = find_program(tool, search_locs)
+            logger.info("{} location: {}".format(tool, tool_path))
+            tool_paths.append(tool_path)
+        except MissingKtransException as mke:
+            logger.fatal("Aborting: {0}".format(mke))
+            sys.exit(_OS_EX_DATAERR)
+        except Exception as e:
+            logger.fatal("Aborting: {0} (unhandled, please report)".format(e))
+            sys.exit(_OS_EX_DATAERR)
+
+    return tool_paths
 
 
 
