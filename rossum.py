@@ -162,6 +162,13 @@ robotiniInfo = collections.namedtuple('robotiniInfo',
     'env' # environment file location for tp-plus
     )
 
+# container datatype for graph class
+packages = collections.namedtuple('packages',
+    'name '
+    'version '
+    'inSource'
+)
+
 
 
 
@@ -225,6 +232,10 @@ def main():
         'This will override env variable, {0}.'.format(ENV_SERVER_IP))
     parser.add_argument('-o', '--override', action='store_true', dest='override_ini',
         help='override robot.ini file directories with specified paths')
+    parser.add_argument('--buildall', action='store_true', dest='buildall',
+        help='build all objects source space depends on.')
+    parser.add_argument('--keepgpp', action='store_true', dest='keepgpp',
+        help='build all objects source space depends on.')
     parser.add_argument('src_dir', type=str, metavar='SRC',
         help="Main directory with packages to build")
     parser.add_argument('build_dir', type=str, nargs='?', metavar='BUILD',
@@ -379,6 +390,7 @@ def main():
 
     # discover packages
     src_space_pkgs = find_pkgs(src_space_dirs)
+    src_space_pkgs = remove_duplicates(src_space_pkgs)
     logger.info("Found {0} package(s) in source space(s):".format(len(src_space_pkgs)))
     for pkg in src_space_pkgs:
         logger.info("  {0} (v{1})".format(pkg.manifest.name, pkg.manifest.version))
@@ -393,6 +405,7 @@ def main():
             logger.info('  {0}'.format(p))
 
         other_pkgs.extend(find_pkgs(other_pkg_dirs))
+        other_pkgs = remove_duplicates(other_pkgs)
         logger.info("Found {0} package(s) in other location(s):".format(len(other_pkgs)))
         for pkg in other_pkgs:
             logger.info("  {0} (v{1})".format(pkg.manifest.name, pkg.manifest.version))
@@ -402,26 +415,31 @@ def main():
     all_pkgs = []
     all_pkgs.extend(src_space_pkgs)
     all_pkgs.extend(other_pkgs)
+    all_pkgs = remove_duplicates(all_pkgs)
 
-    # make sure all their dependencies are present
-    try:
-        check_pkg_dependencies(all_pkgs)
-    except Exception as e:
-        logger.fatal("Error occured while checking packages: {}. Cannot "
-            "continue".format(e))
-        # TODO: find appropriate exit code
-        sys.exit(_OS_EX_DATAERR)
+    # build out dependency trees
+    # for all packages in src_space
+    dependency_graph = create_dependency_graph(src_space_pkgs, all_pkgs)
+    #log dependency trees to logger
+    log_dep_tree(dependency_graph)
+    #filter out additional packages that are not dependencies
+    all_pkgs = filter_packages(all_pkgs, dependency_graph)
 
     # all discovered pkgs get used for dependency and include path resolution,
-    resolve_dependencies(all_pkgs)
     resolve_includes(all_pkgs)
+
+    # select to just build source or all related packages
+    if args.buildall:
+        build_pkgs = all_pkgs
+    else: 
+        build_pkgs = src_space_pkgs
 
     # but only the pkgs in the source space(s) get their objects build
     gen_obj_mappings(src_space_pkgs, tool_paths)
 
 
     # notify user of config
-    logger.info("Building {} package(s)".format(len(src_space_pkgs)))
+    logger.info("Building {} package(s)".format(len(build_pkgs)))
     logger.info("Build configuration:")
     logger.info("  source dir: {0}".format(source_dir))
     logger.info("  build dir : {0}".format(build_dir))
@@ -471,7 +489,14 @@ def main():
     robini_info = KtransRobotIniInfo(path=robot_ini_loc, ftp=configs['ftp'], env=configs['env'])
 
     ws = RossumWorkspace(build=bs_info, sources=sp_infos,
-        robot_ini=robini_info, pkgs=src_space_pkgs)
+        robot_ini=robini_info, pkgs=build_pkgs)
+
+
+    #if --keepgpp is set insert flag into ktrans call in
+    # build.ninja.em so that temp builds in %TEMP% are kept
+    keep_buildd = ''
+    if args.keepgpp:
+        keep_buildd = '-k'
 
     # don't overwrite existing files, unless instructed to do so
     if (not args.overwrite) and os.path.exists(build_file_path):
@@ -487,7 +512,8 @@ def main():
         'ktransw'        : ktransw,
         'rossum_version' : ROSSUM_VERSION,
         'tstamp'         : datetime.datetime.now().isoformat(),
-        'tools'          : tool_paths
+        'tools'          : tool_paths,
+        'keepgpp'        : keep_buildd
     }
     # write out ninja template
     ninja_fl = open(build_file_path, 'w')
@@ -591,23 +617,19 @@ def find_pkgs(dirs):
 
     return pkgs
 
-
-def check_pkg_dependencies(pkgs):
-    """ make sure all dependencies are present
+def remove_duplicates(pkgs):
+    """create a seperate set with unique package names.
+       input list must be the format of the collection
+       RossumPackage.
     """
-    known_pkgs = [p.manifest.name for p in pkgs]
-    logger.debug("Checking dependencies for: {}".format(', '.join(known_pkgs)))
+    visited = set()
+    set_pkgs = []
     for pkg in pkgs:
-        logger.debug("  {0} - deps: {1}".format(
-            pkg.manifest.name,
-            ', '.join(pkg.manifest.depends) if len(pkg.manifest.depends) else 'none'))
-
-        missing = set(pkg.manifest.depends).difference(known_pkgs)
-        if len(missing) > 0:
-            raise MissingPkgDependency("Package {0} is missing dependencies: {1}"
-                .format(pkg.manifest.name, ', '.join(missing)))
-        else:
-            logger.debug("    satisfied")
+        if pkg.manifest.name not in visited:
+            visited.add(pkg.manifest.name)
+            set_pkgs.append(pkg)
+    
+    return set_pkgs
 
 
 def find_in_list(l, pred):
@@ -616,24 +638,86 @@ def find_in_list(l, pred):
             return i
     return None
 
-def resolve_dependencies(pkgs):
-    """ Maps dependency pkg names to RossumPackage instances
+
+def create_dependency_graph(source_pkgs, all_pkgs):
     """
-    pkg_names = [p.manifest.name for p in pkgs]
+    Creates dependency graph for build
+    Maps dependency pkg names to RossumPackage instances
+    """
+    # debug: show user source packages to resolve dependencies for
+    pkg_names = [p.manifest.name for p in source_pkgs]
     logger.debug("Resolving dependencies for: {}".format(', '.join(pkg_names)))
-    for pkg in pkgs:
-        logger.debug("  {}".format(pkg.manifest.name))
 
-        for dep_pkg_name in pkg.manifest.depends:
-            dep_pkg = find_in_list(pkgs, lambda p: p.manifest.name == dep_pkg_name)
+    #start a dependency graph
+    dep_graph = Graph()
+    for pkg in source_pkgs:
+        # set to track visited packages to avoid circular referencing
+        visited = set()
+        # add to final_pkgs object
+        # set package as a root on dependency tree
+        dep_graph.setRoot(pkg.manifest.name, pkg.manifest.version)
+        # Search through dependencies and add to dep graph and to
+        # dependencies in RossumPackage collection
+        add_dependency(pkg, visited, dep_graph, all_pkgs)
+    
+    return dep_graph
 
-            # this should not be possible, as pkg dependency relationships
-            # should have been checked earlier, but you never know.
+def add_dependency(src_package, visited, graph, pkgs):
+    """
+    """
+    if src_package.manifest.name not in visited:
+        logger.debug("  {}:".format(src_package.manifest.name))
+        for depend_name in src_package.manifest.depends:
+            dep_pkg = find_in_list(pkgs, lambda p: p.manifest.name == depend_name)
             if dep_pkg is None:
                 raise MissingPkgDependency("Error finding internal pkg instance for '{}', "
-                    "can't find it".format(dep_pkg_name))
-            logger.debug("    {}: found".format(dep_pkg_name))
-            pkg.dependencies.append(dep_pkg)
+                    "can't find it".format(depend_name))
+            # add graph edge and put dependencies into RossumPackage Object
+            graph.addEdge(src_package.manifest.name, depend_name, dep_pkg.manifest.version, False)
+            logger.debug("    {}: found".format(depend_name))
+            src_package.dependencies.append(dep_pkg)
+            # after dependency has been added track to visited set to avoid circular dependencies
+            visited.add(src_package.manifest.name)
+            #if depend package has dependencies search for those as well
+            if len(dep_pkg.manifest.depends) > 0:
+                add_dependency(dep_pkg, visited, graph, pkgs)
+
+def log_dep_tree(graph):
+    """write depedency trees from source packages
+       to debug logger
+    """
+    pkg_names = [p.name for p in graph.root]
+    for name in pkg_names:
+        #print depedency tree for logger
+        logger.debug("Printing dependency tree for: {}".format(name))
+        depstring = graph.print_dependencies(name)
+        if depstring is not None:
+            ## split into seperate lines for debug logger
+            depstring = depstring.splitlines()
+            for line in depstring:
+                logger.debug("  {}".format(line))
+
+
+def filter_packages(pkgs, graph):
+    """filter out packages in RossumPackage that
+       are not in the dependency tree
+    """
+    #create new list to store applicable packages
+    filtered = []
+    #find all root packages in the source
+    pkg_names = [p.name for p in graph.root]
+    # track visited packages to avoid duplicates
+    visited = set()
+    for name in pkg_names:
+        #retrieve all packages the source package depends on
+        deps = graph.depthFirstSearch(name)
+        if len(deps) > 0:
+            for d in deps:
+                if d not in visited:
+                    filtered.append(find_in_list(pkgs, lambda p: p.manifest.name == d))
+                    visited.add(d)
+    # return filtered list of packages
+    return filtered
 
 
 def dedup(seq):
@@ -659,12 +743,10 @@ def resolve_includes(pkgs):
     """
     pkg_names = [p.manifest.name for p in pkgs]
     logger.debug("Resolving includes for: {}".format(', '.join(pkg_names)))
-
+    
     for pkg in pkgs:
         visited = set()
         logger.debug("  {}".format(pkg.manifest.name))
-        # TODO: is dedup ok here? Doesn't change order of include dirs, but
-        #       does change the resulting include path
         inc_dirs = dedup(resolve_includes_for_pkg(pkg, visited))
         pkg.include_dirs.extend(inc_dirs)
         logger.debug("    added {} path(s)".format(len(inc_dirs)))
@@ -885,6 +967,98 @@ def parse_robotini(fpath):
         env=config['WinOLPC_Util']['Tpp-env'])
 
 
+#Class to represent a graph 
+class Graph:
+
+    def __init__(self, root=None, version=None): 
+        self.graph = collections.defaultdict(list) #dictionary containing adjacency List
+        self.root = []
+        if root is not None and version is not None:
+            self.root.append(self.addPackage(root, version, True))
+
+    def __getitem__(self, key):
+        for next in self.root:
+            if next.name == key:
+                return next
+
+    def print_dependencies(self, rootname):
+        depList = ''
+        
+        stack = self.depthFirstSearch(rootname)
+        depList += '<{}> {} {x}\n'.format(rootname, self[rootname].version, x='*' if self[rootname].inSource else '')
+        stack.remove(rootname)
+
+        for next in self.graph[rootname]:
+            depList = self.depPrintRec(next, stack, '|-- ', depList)
+
+        return depList
+
+    def depPrintRec(self, pkg, stack, prepStr, outstr):
+        if pkg.name in stack:
+            outstr += prepStr + '<{}> {} {x}\n'.format(pkg.name, pkg.version, x='*' if pkg.inSource else '')
+            stack.remove(pkg.name)
+
+        for next in self.graph[pkg.name]:
+            if next.name in stack:
+                outstr = self.depPrintRec(next, stack, '|   ' + prepStr, outstr)
+
+        return outstr
+
+  
+    def addPackage(self, Name, Version, Source):
+        return packages(
+                name= Name,
+                version= Version,
+                inSource= Source)
+
+    def setRoot(self, name, version):
+        self.root.append(self.addPackage(name, version, True))
+
+    # function to add an edge to graph 
+    def addEdge(self, pNode, cNode, version, isSource):
+        self.graph[pNode].append(self.addPackage(cNode, version, isSource))
+
+    def depthFirstSearch(self, start, visited=None, stack=None):
+        if visited is None:
+            visited = set()
+        if stack is None:
+            stack = []
+            
+        stack.append(start)
+        visited.add(start)
+        
+        pkg_names = set([p.name for p in self.graph[start]])
+
+        difference = pkg_names - visited
+        for next in difference:
+            self.depthFirstSearch(next,visited, stack)
+        
+        return stack
+
+
+def graph_tests():
+    g= Graph()
+    g.setRoot("Hash", '1.0.0')
+    g.addEdge("Hash", "kUnit", '0.0.1', True)
+    g.addEdge("Hash", "Strings", '0.0.2', True)
+    g.addEdge("Strings", "errors", '0.0.3', False) 
+    g.addEdge("Strings", "kUnit", '0.0.4', True)
+    g.addEdge("kUnit", "Strings", '0.0.2', True)
+    g.addEdge("errors", "registers", '0.0.1', False)
+    g.addEdge("errors", "kUnit", '0.0.4', True)
+
+    g.setRoot("ioFile", '1.0.0')
+    g.addEdge("ioFile", "Strings", '0.0.2', True)
+
+
+    # depth first search hierarchy
+    dep = g.depthFirstSearch("Hash")
+    print(dep)
+    dep = g.depthFirstSearch("ioFile")
+    print(dep)
+    # Print dependency graph
+    print(g.print_dependencies("Hash"))
+    print(g.print_dependencies("ioFile"))
 
 
 if __name__ == '__main__':
