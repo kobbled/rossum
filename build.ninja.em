@@ -75,6 +75,23 @@ rule maketp_tp
                $in $
                /config "@(ws.robot_ini.path)"
 
+# .tpp -> .ls
+#
+# Run ls files through
+rule tpp_ls
+  command = @(tools['tpp']['path']) $
+               $in $
+               -o $out
+               @[if len(ws.robot_ini.env) > 0]-e "@(ws.robot_ini.env)"@[end if]@
+
+# .yaml -> .xml
+#
+# Run ls files through
+rule yaml_xml
+  command = @(tools['yaml']['path']) $
+               $in $
+               $out $
+
 
 ### build statements ###########################################################
 
@@ -91,6 +108,8 @@ rule maketp_tp
 build $build_dir\@(obj): @
 @[if '.kl' in src]@ ktrans_pc @[end if]@ @
 @[if '.ls' in src]@ maketp_tp @[end if]@ @
+@[if '.tpp' in src]@ tpp_ls @[end if]@ @
+@[if '.yml' in src]@ yaml_xml @[end if]@ @
 $@(pkg.manifest.name)_dir\@(src)
   lib_includes = $@(pkg.manifest.name)_include_flags
   description = @(pkg.manifest.name) :: @(src)

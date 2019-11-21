@@ -49,6 +49,10 @@ KL_SUFFIX = 'kl'
 PCODE_SUFFIX = 'pc'
 TP_SUFFIX = 'ls'
 TPCODE_SUFFIX = 'tp'
+TPP_SUFFIX = 'tpp'
+TPP_INTERP_SUFFIX = 'ls'
+YAML_SUFFIX = 'yml'
+XML_SUFFIX = 'xml'
 
 ENV_PKG_PATH='ROSSUM_PKG_PATH'
 ENV_DEFAULT_CORE_VERSION='ROSSUM_CORE_VERSION'
@@ -70,6 +74,8 @@ FANUC_SEARCH_PATH = [
 KTRANS_BIN_NAME='ktrans.exe'
 KTRANSW_BIN_NAME='ktransw.cmd'
 MAKETP_BIN_NAME='maketp.exe'
+TPP_BIN_NAME='tpp.bat'
+XML_BIN_NAME='yamljson2xml.cmd'
 
 KTRANS_SEARCH_PATH = [
     'C:\\Program Files\\Fanuc\\WinOLPC\\bin',
@@ -105,7 +111,7 @@ KtransInfo = collections.namedtuple('KtransInfo', 'path support')
 
 KtransWInfo = collections.namedtuple('KtransWInfo', 'path')
 
-KtransRobotIniInfo = collections.namedtuple('KtransRobotIniInfo', 'path')
+KtransRobotIniInfo = collections.namedtuple('KtransRobotIniInfo', 'path ftp env')
 
 # In-memory representation of raw data from a parsed rossum manifest
 RossumManifest = collections.namedtuple('RossumManifest',
@@ -152,7 +158,8 @@ robotiniInfo = collections.namedtuple('robotiniInfo',
                     # eg. C:\Program Files (x86)\Fanuc\WinOLPC\Versions\V910-1\bin
     'support '
     'output '
-    'ftp' # ftp address where the robot server resides
+    'ftp ' # ftp address where the robot server resides
+    'env' # environment file location for tp-plus
     )
 
 
@@ -298,7 +305,7 @@ def main():
             sys.exit(_OS_EX_DATAERR)
 
     #make list of tool names
-    tools = [KTRANS_BIN_NAME, KTRANSW_BIN_NAME, MAKETP_BIN_NAME]
+    tools = [KTRANS_BIN_NAME, KTRANSW_BIN_NAME, MAKETP_BIN_NAME, TPP_BIN_NAME, XML_BIN_NAME]
     # preset list of paths to search for paths
     search_locs = []
     search_locs.extend(KTRANS_SEARCH_PATH)
@@ -310,7 +317,9 @@ def main():
     tool_paths = {
         'ktrans' : {'from_suffix' : '0', 'to_suffix' : '0', 'path' : path_lst[0]},
         'ktransw' : {'from_suffix' : KL_SUFFIX, 'to_suffix' : PCODE_SUFFIX, 'path' : (args.ktransw or path_lst[1])},
-        'maketp' : {'from_suffix' : TP_SUFFIX, 'to_suffix' : TPCODE_SUFFIX, 'path' : path_lst[2]}
+        'maketp' : {'from_suffix' : TP_SUFFIX, 'to_suffix' : TPCODE_SUFFIX, 'path' : path_lst[2]},
+        'tpp' : {'from_suffix' : TPP_SUFFIX, 'to_suffix' : TPP_INTERP_SUFFIX, 'path' : path_lst[3]},
+        'yaml' : {'from_suffix' : YAML_SUFFIX, 'to_suffix' : XML_SUFFIX, 'path' : path_lst[4]}
     }
 
     # try to find support directory for selected core software version
@@ -438,6 +447,8 @@ def main():
     configs['version'] = args.core_version
     # set ip address to upload files to
     configs['ftp'] = args.server_ip
+    #tpp env file
+    configs['env'] = ''
 
     # update struct if not using robot.ini presets
     if args.override_ini:
@@ -446,6 +457,8 @@ def main():
         configs['version'] = robot_ini_info.version
         # set ip address to upload files to
         configs['ftp'] = robot_ini_info.ftp
+        #tpp env
+        configs['env'] = robot_ini_info.env
 
 
     # populate dicts & lists needed by template
@@ -455,7 +468,7 @@ def main():
     ktransw = KtransWInfo(path=tool_paths['ktransw']['path'])
     bs_info = RossumSpaceInfo(path=build_dir)
     sp_infos = [RossumSpaceInfo(path=p) for p in src_space_dirs]
-    robini_info = KtransRobotIniInfo(path=robot_ini_loc)
+    robini_info = KtransRobotIniInfo(path=robot_ini_loc, ftp=configs['ftp'], env=configs['env'])
 
     ws = RossumWorkspace(build=bs_info, sources=sp_infos,
         robot_ini=robini_info, pkgs=src_space_pkgs)
@@ -474,7 +487,6 @@ def main():
         'ktransw'        : ktransw,
         'rossum_version' : ROSSUM_VERSION,
         'tstamp'         : datetime.datetime.now().isoformat(),
-        'ip'             : configs['ftp'],
         'tools'          : tool_paths
     }
     # write out ninja template
@@ -858,6 +870,10 @@ def parse_robotini(fpath):
     if "Ftp" not in config['WinOLPC_Util']:
         config['WinOLPC_Util']['Ftp'] = os.environ.get(ENV_SERVER_IP)
 
+    # handle tpp env
+    if "Tpp-env" not in config['WinOLPC_Util']:
+        config['WinOLPC_Util']['Tpp-env'] = ''
+
     return robotiniInfo(
         robot=config['WinOLPC_Util']['Robot'],
         version=config['WinOLPC_Util']['Version'],
@@ -865,7 +881,8 @@ def parse_robotini(fpath):
         version_path=config['WinOLPC_Util']['Path'],
         support=config['WinOLPC_Util']['Support'],
         output=config['WinOLPC_Util']['Output'],
-        ftp=config['WinOLPC_Util']['Ftp'])
+        ftp=config['WinOLPC_Util']['Ftp'],
+        env=config['WinOLPC_Util']['Tpp-env'])
 
 
 
