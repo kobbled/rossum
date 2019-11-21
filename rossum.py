@@ -232,9 +232,9 @@ def main():
         'This will override env variable, {0}.'.format(ENV_SERVER_IP))
     parser.add_argument('-o', '--override', action='store_true', dest='override_ini',
         help='override robot.ini file directories with specified paths')
-    parser.add_argument('--buildall', action='store_true', dest='buildall',
+    parser.add_argument('-b', '--buildall', action='store_true', dest='buildall',
         help='build all objects source space depends on.')
-    parser.add_argument('--keepgpp', action='store_true', dest='keepgpp',
+    parser.add_argument('-g', '--keepgpp', action='store_true', dest='keepgpp',
         help='build all objects source space depends on.')
     parser.add_argument('src_dir', type=str, metavar='SRC',
         help="Main directory with packages to build")
@@ -435,7 +435,7 @@ def main():
         build_pkgs = src_space_pkgs
 
     # but only the pkgs in the source space(s) get their objects build
-    gen_obj_mappings(src_space_pkgs, tool_paths)
+    gen_obj_mappings(build_pkgs, tool_paths)
 
 
     # notify user of config
