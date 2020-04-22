@@ -81,8 +81,7 @@ rule maketp_tp
 rule tpp_ls
   command = @(tools['tpp']['path']) $
                $in $
-               -o $out
-               @[if len(ws.robot_ini.env) > 0]-e "@(ws.robot_ini.env)"@[end if]@
+               -o $out @[if len(ws.robot_ini.env) > 0]@ -e "@(ws.robot_ini.env)"@[end if]@
 
 # .yaml -> .xml
 #
