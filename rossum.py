@@ -27,7 +27,7 @@
 
 import em
 import datetime
-import os
+import os, shutil
 import sys
 import json
 import configparser
@@ -236,11 +236,45 @@ def main():
         help='build all objects source space depends on.')
     parser.add_argument('-g', '--keepgpp', action='store_true', dest='keepgpp',
         help='build all objects source space depends on.')
-    parser.add_argument('src_dir', type=str, metavar='SRC',
+    parser.add_argument('--clean', action='store_true', dest='rossum_clean',
+        help='clean all files out of build directory')
+    parser.add_argument('src_dir', type=str, nargs='?', metavar='SRC',
         help="Main directory with packages to build")
     parser.add_argument('build_dir', type=str, nargs='?', metavar='BUILD',
         help="Directory for out-of-source builds (default: 'cwd')")
     args = parser.parse_args()
+
+
+
+    ############################################################################
+    #
+    # Validation
+    #
+
+
+    # build dir is either CWD or user specified it
+    build_dir   = os.path.abspath(args.build_dir or os.getcwd())
+    #clean out files
+    # (ref): https://stackoverflow.com/questions/185936/how-to-delete-the-contents-of-a-folder
+    if args.rossum_clean:
+      for filename in os.listdir(build_dir):
+        file_path = os.path.join(build_dir, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e))
+      
+      sys.exit(1)
+
+    
+    #source directory needs to be specified
+    if not args.src_dir:
+      raise RuntimeError("Source directory must be specified.")
+    source_dir  = os.path.abspath(args.src_dir)
+    extra_paths = [os.path.abspath(p) for p in args.extra_paths]
 
 
     # configure the logger
@@ -253,20 +287,7 @@ def main():
     if args.quiet:
         logger.setLevel(logging.WARNING)
 
-
     logger.info("This is rossum v{0}".format(ROSSUM_VERSION))
-
-
-
-    ############################################################################
-    #
-    # Validation
-    #
-
-    # build dir is either CWD or user specified it
-    build_dir   = os.path.abspath(args.build_dir or os.getcwd())
-    source_dir  = os.path.abspath(args.src_dir)
-    extra_paths = [os.path.abspath(p) for p in args.extra_paths]
 
 
     # make sure that source dir exists
@@ -895,7 +916,7 @@ def find_robotini(source_dir, args):
     # check that it actually exists
     logger.debug("Checking: {}".format(robot_ini_loc))
     if not os.path.exists(robot_ini_loc):
-        logger.warn("No {} in CWD, and no alternative provided, trying "
+        logger.warning("No {} in CWD, and no alternative provided, trying "
             "source space".format(ROBOT_INI_NAME))
 
         robot_ini_loc = os.path.join(source_dir, ROBOT_INI_NAME)
@@ -903,7 +924,7 @@ def find_robotini(source_dir, args):
         if os.path.exists(robot_ini_loc):
             logger.info("Found {} in source space".format(ROBOT_INI_NAME))
         else:
-            logger.warn("File does not exist: {}".format(robot_ini_loc))
+            logger.warning("File does not exist: {}".format(robot_ini_loc))
             logger.fatal("Cannot find a {}, aborting".format(ROBOT_INI_NAME))
             sys.exit(_OS_EX_DATAERR)
         
