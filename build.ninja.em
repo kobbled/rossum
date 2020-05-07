@@ -103,6 +103,14 @@ rule yaml_xml
                $in $
                $out $
 
+# .csv -> .csv
+#
+# Run ls files through
+rule csv_csv
+  command = "@(tools['csv']['path'])" /y /q $
+               "$in" $
+               "$build_dir" $
+
 
 ### build statements ###########################################################
 
@@ -121,6 +129,7 @@ build $build_dir\@(obj): @
 @[if '.ls' in src]@ maketp_tp @[end if]@ @
 @[if '.tpp' in src]@ tpp_tp @[end if]@ @
 @[if '.yml' in src]@ yaml_xml @[end if]@ @
+@[if '.csv' in src]@ csv_csv @[end if]@ @
 $@(pkg.manifest.name)_dir\@(src)
   lib_includes = $@(pkg.manifest.name)_include_flags
   description = @(pkg.manifest.name) :: @(src)

@@ -53,6 +53,7 @@ TPP_SUFFIX = 'tpp'
 TPP_INTERP_SUFFIX = 'ls'
 YAML_SUFFIX = 'yml'
 XML_SUFFIX = 'xml'
+CSV_SUFFIX = 'csv'
 
 ENV_PKG_PATH='ROSSUM_PKG_PATH'
 ENV_DEFAULT_CORE_VERSION='ROSSUM_CORE_VERSION'
@@ -352,6 +353,7 @@ def main():
         'maketp' : {'from_suffix' : TP_SUFFIX, 'interp_suffix' : TPCODE_SUFFIX, 'comp_suffix' : TPCODE_SUFFIX, 'path' : path_lst[2]},
         'tpp' : {'from_suffix' : TPP_SUFFIX, 'interp_suffix' : TPP_INTERP_SUFFIX, 'comp_suffix' : TPCODE_SUFFIX, 'path' : path_lst[3], 'compile' : path_lst[2]},
         'yaml' : {'from_suffix' : YAML_SUFFIX, 'interp_suffix' : XML_SUFFIX,  'comp_suffix' : XML_SUFFIX, 'path' : path_lst[4]},
+        'csv' : {'from_suffix' : CSV_SUFFIX, 'interp_suffix' : CSV_SUFFIX,  'comp_suffix' : CSV_SUFFIX, 'path' : 'C:\\Windows\\SysWOW64\\xcopy.exe'}
     }
 
     # try to find support directory for selected core software version
