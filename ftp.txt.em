@@ -7,7 +7,9 @@ mdel @
 @[for pkg in ws.pkgs]@
 @[if len(pkg.objects) > 0]@
 @[for (src, obj) in pkg.objects]@
+@[if not '.xml' in obj]@
 "@(obj)" @
+@[end if]@
 @[end for]@
 @[end if]@
 @[end for]@
@@ -29,17 +31,24 @@ mput @
 @[for pkg in ws.pkgs]@
 @[if len(pkg.objects) > 0]@
 @[for (src, obj) in pkg.objects]@
-@[if not '.xml' in obj]@
+@[if not ('.xml') in obj and not ('.pc') in obj]@
 "@(ws.build.path)\@(obj)" @
 @[end if]@
 @[end for]@
 @[end if]@
 @[end for]@
+"@(ws.build.path)\*.pc"
 
 @# search for xml files. if found change dir
 @{xml_files = [obj for (src, obj) in pkg.objects if '.xml' in obj]}@
 @[if len(xml_files) > 0]@
-cd mc:\
+cd fr:\
+@# delete
+mdel @
+@[for obj in xml_files]@
+"@(obj)" @
+@[end for]@
+
 @# and upload
 mput @
 @[for obj in xml_files]@
