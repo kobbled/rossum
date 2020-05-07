@@ -55,7 +55,7 @@ build_dir = @(ws.build.path)
 # this rule always places the Karel support directory corresponding to the
 # runtime version on the include path, as that is a globally needed path.
 rule ktrans_pc
-  command = @(ktransw.path) $
+  command = "@(ktransw.path)" $
                -q @(keepgpp) $
                -MM -MP -MT $out -MF $out.d $
                --ktrans="@(ktrans.path)" $
@@ -71,7 +71,7 @@ rule ktrans_pc
 #
 # Run ls files through
 rule maketp_tp
-  command = @(tools['maketp']['path']) $
+  command = "@(tools['maketp']['path'])" $
                $in $
                /config "@(ws.robot_ini.path)"
 
@@ -79,15 +79,27 @@ rule maketp_tp
 #
 # Run ls files through
 rule tpp_ls
-  command = @(tools['tpp']['path']) $
+  command = "@(tools['tpp']['path'])" $
                $in $
                -o $out @[if len(ws.robot_ini.env) > 0]@ -e "@(ws.robot_ini.env)"@[end if]@
+
+# .tpp -> .tp
+#
+# Run ls files through
+rule tpp_tp
+  command = "@(tools['tpp']['path'])" $
+               $in $
+               -o $out @[if len(ws.robot_ini.env) > 0]@ -e "@(ws.robot_ini.env)"@[end if]@ $
+               && "@(tools['tpp']['compile'])" $out /config "@(ws.robot_ini.path)" $
+               && del $out
+
+
 
 # .yaml -> .xml
 #
 # Run ls files through
 rule yaml_xml
-  command = @(tools['yaml']['path']) $
+  command = "@(tools['yaml']['path'])" $
                $in $
                $out $
 
@@ -103,11 +115,11 @@ rule yaml_xml
 @(pkg.manifest.name)_deps = @(str.join(' ', [d.manifest.name for d in pkg.dependencies]))
 @(pkg.manifest.name)_include_flags = @(str.join(' ', ['/I"{0}"'.format(d) for d in pkg.include_dirs]))
 
-@[for (src, obj) in pkg.objects]@
+@[for (src, obj, _) in pkg.objects]@
 build $build_dir\@(obj): @
 @[if '.kl' in src]@ ktrans_pc @[end if]@ @
 @[if '.ls' in src]@ maketp_tp @[end if]@ @
-@[if '.tpp' in src]@ tpp_ls @[end if]@ @
+@[if '.tpp' in src]@ tpp_tp @[end if]@ @
 @[if '.yml' in src]@ yaml_xml @[end if]@ @
 $@(pkg.manifest.name)_dir\@(src)
   lib_includes = $@(pkg.manifest.name)_include_flags

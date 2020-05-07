@@ -348,10 +348,10 @@ def main():
     # put list into dictionary for file type build rule
     tool_paths = {
         'ktrans' : {'from_suffix' : '0', 'to_suffix' : '0', 'path' : path_lst[0]},
-        'ktransw' : {'from_suffix' : KL_SUFFIX, 'to_suffix' : PCODE_SUFFIX, 'path' : (args.ktransw or path_lst[1])},
-        'maketp' : {'from_suffix' : TP_SUFFIX, 'to_suffix' : TPCODE_SUFFIX, 'path' : path_lst[2]},
-        'tpp' : {'from_suffix' : TPP_SUFFIX, 'to_suffix' : TPP_INTERP_SUFFIX, 'path' : path_lst[3]},
-        'yaml' : {'from_suffix' : YAML_SUFFIX, 'to_suffix' : XML_SUFFIX, 'path' : path_lst[4]}
+        'ktransw' : {'from_suffix' : KL_SUFFIX, 'interp_suffix' : PCODE_SUFFIX, 'comp_suffix' : PCODE_SUFFIX, 'path' : (args.ktransw or path_lst[1])},
+        'maketp' : {'from_suffix' : TP_SUFFIX, 'interp_suffix' : TPCODE_SUFFIX, 'comp_suffix' : TPCODE_SUFFIX, 'path' : path_lst[2]},
+        'tpp' : {'from_suffix' : TPP_SUFFIX, 'interp_suffix' : TPP_INTERP_SUFFIX, 'comp_suffix' : TPCODE_SUFFIX, 'path' : path_lst[3], 'compile' : path_lst[2]},
+        'yaml' : {'from_suffix' : YAML_SUFFIX, 'interp_suffix' : XML_SUFFIX,  'comp_suffix' : XML_SUFFIX, 'path' : path_lst[4]},
     }
 
     # try to find support directory for selected core software version
@@ -804,18 +804,20 @@ def gen_obj_mappings(pkgs, mappings):
             src = src.replace('/', '\\')
             for (k, v) in mappings.items():
                 if v['from_suffix'] in src:
-                    obj = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['to_suffix'])
+                    obj = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['interp_suffix'])
+                    build = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['comp_suffix'])
             logger.debug("    adding: {} -> {}".format(src, obj))
-            pkg.objects.append((src, obj))
+            pkg.objects.append((src, obj, build))
 
         # TODO: refactor this: make test rule generation optional
         for src in pkg.manifest.tests:
             src = src.replace('/', '\\')
             for (k, v) in mappings.items():
                 if v['from_suffix'] in src:
-                    obj = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['to_suffix'])
+                    obj = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['interp_suffix'])
+                    build = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['comp_suffix'])
             logger.debug("    adding: {} -> {}".format(src, obj))
-            pkg.objects.append((src, obj))
+            pkg.objects.append((src, obj, build))
 
 
 def find_fr_install_dir(search_locs, is64bit=False):
