@@ -2,12 +2,13 @@ open @(ws.robot_ini.ftp)
 anon
 bin
 prompt
+cd md:\
 @# delete all files that might be on controller
 mdel @
 @[for pkg in ws.pkgs]@
 @[if len(pkg.objects) > 0]@
-@[for (src, obj) in pkg.objects]@
-@[if not '.xml' in obj]@
+@[for (src, _, obj) in pkg.objects]@
+@[if not '.xml' in obj and not '.csv' in obj]@
 "@(obj)" @
 @[end if]@
 @[end for]@
@@ -18,7 +19,7 @@ mdel @
 mdel @
 @[for pkg in ws.pkgs]@
 @[if len(pkg.objects) > 0]@
-@[for (src, obj) in pkg.objects]@
+@[for (src, _, obj) in pkg.objects]@
 @[if '.pc' in obj]@
 "@(os.path.splitext(obj)[0]+'.vr')" @
 @[end if]@
@@ -30,8 +31,8 @@ mdel @
 mput @
 @[for pkg in ws.pkgs]@
 @[if len(pkg.objects) > 0]@
-@[for (src, obj) in pkg.objects]@
-@[if not ('.xml') in obj and not ('.pc') in obj]@
+@[for (src, _, obj) in pkg.objects]@
+@[if not any(o in obj for o in ('.csv','.xml','.pc'))]@
 "@(ws.build.path)\@(obj)" @
 @[end if]@
 @[end for]@
@@ -40,7 +41,7 @@ mput @
 "@(ws.build.path)\*.pc"
 
 @# search for xml files. if found change dir
-@{xml_files = [obj for (src, obj) in pkg.objects if '.xml' in obj]}@
+@{xml_files = [obj for (src, _, obj) in pkg.objects if any(o in obj for o in ('.csv','.xml'))]}@
 @[if len(xml_files) > 0]@
 cd fr:\
 @# delete
