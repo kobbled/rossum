@@ -62,8 +62,11 @@ ENV_SERVER_IP='ROSSUM_SERVER_IP'
 BUILD_FILE_NAME='build.ninja'
 BUILD_FILE_TEMPLATE_NAME='build.ninja.em'
 
-FTP_FILE_NAME='ftp.txt'
-FTP_FILE_TEMPLATE_NAME='ftp.txt.em'
+FTP_FILE_NAME='ftp-push.txt'
+FTP_FILE_TEMPLATE_NAME='ftp-push.txt.em'
+
+DELETE_FILE_NAME='ftp-del.txt'
+DELETE_FILE_TEMPLATE_NAME='ftp-del.txt.em'
 
 FANUC_SEARCH_PATH = [
     'C:\\Program Files\\Fanuc',
@@ -387,6 +390,8 @@ def main():
     build_file_path = os.path.join(build_dir, BUILD_FILE_NAME)
     template_ftp_path = os.path.join(template_dir, FTP_FILE_TEMPLATE_NAME) # for ftp
     ftp_file_path = os.path.join(build_dir, FTP_FILE_NAME)
+    template_ftp_del = os.path.join(template_dir, DELETE_FILE_TEMPLATE_NAME) # for ftp
+    ftp_del_path = os.path.join(build_dir, DELETE_FILE_NAME)
 
     # check
     if not os.path.isfile(template_path):
@@ -543,19 +548,26 @@ def main():
     ninja_interp = em.Interpreter(
             output=ninja_fl, globals=dict(globls),
             options={em.RAW_OPT : True, em.BUFFERED_OPT : True})
-    # write out ftp template
+    # write out ftp push template
     ftp_fl = open(ftp_file_path, 'w')
     ftp_interp = em.Interpreter(
             output=ftp_fl, globals=dict(globls),
+            options={em.RAW_OPT : True, em.BUFFERED_OPT : True})
+    # write out ftp delete template
+    ftp_del = open(ftp_del_path, 'w')
+    ftp_del_interp = em.Interpreter(
+            output=ftp_del, globals=dict(globls),
             options={em.RAW_OPT : True, em.BUFFERED_OPT : True})
     # load and process the template
     logger.debug("Processing template")
     ninja_interp.file(open(template_path))
     ftp_interp.file(open(template_ftp_path))
+    ftp_del_interp.file(open(template_ftp_del))
     # shutdown empy interpreters
     logger.debug("Shutting down empy")
     ninja_interp.shutdown()
     ftp_interp.shutdown()
+    ftp_del_interp.shutdown()
 
 
     # done
