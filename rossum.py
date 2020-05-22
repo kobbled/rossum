@@ -817,7 +817,7 @@ def gen_obj_mappings(pkgs, mappings):
         for src in pkg.manifest.source:
             src = src.replace('/', '\\')
             for (k, v) in mappings.items():
-                if v['from_suffix'] in src:
+                if '.' + v['from_suffix'] in src:
                     obj = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['interp_suffix'])
                     build = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['comp_suffix'])
             logger.debug("    adding: {} -> {}".format(src, obj))
@@ -827,7 +827,7 @@ def gen_obj_mappings(pkgs, mappings):
         for src in pkg.manifest.tests:
             src = src.replace('/', '\\')
             for (k, v) in mappings.items():
-                if v['from_suffix'] in src:
+                if '.' + v['from_suffix'] in src:
                     obj = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['interp_suffix'])
                     build = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['comp_suffix'])
             logger.debug("    adding: {} -> {}".format(src, obj))
