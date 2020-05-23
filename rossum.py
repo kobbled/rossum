@@ -32,6 +32,7 @@ import sys
 import json
 import configparser
 import fnmatch
+from send2trash import send2trash
 
 import collections
 
@@ -261,13 +262,17 @@ def main():
     #clean out files
     # (ref): https://stackoverflow.com/questions/185936/how-to-delete-the-contents-of-a-folder
     if args.rossum_clean:
+      # make sure folder has build.ninja file or do not delete
+      file_list = os.listdir(build_dir)
+      if not any('build.ninja' in s for s in file_list):
+        print('Refuse deletion of folder contents. Folder must have a build.ninja file')
+        sys.exit(1)
+
       for filename in os.listdir(build_dir):
         file_path = os.path.join(build_dir, filename)
         try:
             if os.path.isfile(file_path) or os.path.islink(file_path):
-                os.unlink(file_path)
-            elif os.path.isdir(file_path):
-                shutil.rmtree(file_path)
+                send2trash(file_path)
         except Exception as e:
             print('Failed to delete %s. Reason: %s' % (file_path, e))
       
