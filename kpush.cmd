@@ -1,2 +1,2 @@
 @echo off
-ftp -s:ftp-push.txt
+ftp -s:ftp.txt

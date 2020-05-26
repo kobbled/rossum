@@ -63,11 +63,8 @@ ENV_SERVER_IP='ROSSUM_SERVER_IP'
 BUILD_FILE_NAME='build.ninja'
 BUILD_FILE_TEMPLATE_NAME='build.ninja.em'
 
-FTP_FILE_NAME='ftp-push.txt'
-FTP_FILE_TEMPLATE_NAME='ftp-push.txt.em'
-
-DELETE_FILE_NAME='ftp-del.txt'
-DELETE_FILE_TEMPLATE_NAME='ftp-del.txt.em'
+FTP_FILE_NAME='ftp.txt'
+FTP_FILE_TEMPLATE_NAME='ftp.txt.em'
 
 FANUC_SEARCH_PATH = [
     'C:\\Program Files\\Fanuc',
@@ -241,6 +238,8 @@ def main():
         help='build all objects source space depends on.')
     parser.add_argument('-g', '--keepgpp', action='store_true', dest='keepgpp',
         help='build all objects source space depends on.')
+    parser.add_argument('-t', '--compiletp', action='store_true', dest='compiletp',
+        help='compile .tpp files into .tp files. If false will just interpret to .ls.')
     parser.add_argument('--clean', action='store_true', dest='rossum_clean',
         help='clean all files out of build directory')
     parser.add_argument('src_dir', type=str, nargs='?', metavar='SRC',
@@ -359,10 +358,14 @@ def main():
         'ktrans' : {'from_suffix' : '0', 'to_suffix' : '0', 'path' : path_lst[0]},
         'ktransw' : {'from_suffix' : KL_SUFFIX, 'interp_suffix' : PCODE_SUFFIX, 'comp_suffix' : PCODE_SUFFIX, 'path' : (args.ktransw or path_lst[1])},
         'maketp' : {'from_suffix' : TP_SUFFIX, 'interp_suffix' : TPCODE_SUFFIX, 'comp_suffix' : TPCODE_SUFFIX, 'path' : path_lst[2]},
-        'tpp' : {'from_suffix' : TPP_SUFFIX, 'interp_suffix' : TPP_INTERP_SUFFIX, 'comp_suffix' : TPCODE_SUFFIX, 'path' : path_lst[3], 'compile' : path_lst[2]},
         'yaml' : {'from_suffix' : YAML_SUFFIX, 'interp_suffix' : XML_SUFFIX,  'comp_suffix' : XML_SUFFIX, 'path' : path_lst[4]},
         'csv' : {'from_suffix' : CSV_SUFFIX, 'interp_suffix' : CSV_SUFFIX,  'comp_suffix' : CSV_SUFFIX, 'path' : 'C:\\Windows\\SysWOW64\\xcopy.exe'}
     }
+    #for tpp decide if just interpreting, or compiling to tp
+    if args.compiletp:
+      tool_paths['tpp'] = {'from_suffix' : TPP_SUFFIX, 'interp_suffix' : TPP_INTERP_SUFFIX, 'comp_suffix' : TPCODE_SUFFIX, 'path' : path_lst[3], 'compile' : path_lst[2]}
+    else:
+      tool_paths['tpp'] = {'from_suffix' : TPP_SUFFIX, 'interp_suffix' : TPP_INTERP_SUFFIX, 'comp_suffix' : TPP_INTERP_SUFFIX, 'path' : path_lst[3]}
 
     # try to find support directory for selected core software version
     logger.info("Setting default system core version to: {}".format(args.core_version))
@@ -395,8 +398,6 @@ def main():
     build_file_path = os.path.join(build_dir, BUILD_FILE_NAME)
     template_ftp_path = os.path.join(template_dir, FTP_FILE_TEMPLATE_NAME) # for ftp
     ftp_file_path = os.path.join(build_dir, FTP_FILE_NAME)
-    template_ftp_del = os.path.join(template_dir, DELETE_FILE_TEMPLATE_NAME) # for ftp
-    ftp_del_path = os.path.join(build_dir, DELETE_FILE_NAME)
 
     # check
     if not os.path.isfile(template_path):
@@ -546,7 +547,8 @@ def main():
         'rossum_version' : ROSSUM_VERSION,
         'tstamp'         : datetime.datetime.now().isoformat(),
         'tools'          : tool_paths,
-        'keepgpp'        : keep_buildd
+        'keepgpp'        : keep_buildd,
+        'compiletp'      : args.compiletp
     }
     # write out ninja template
     ninja_fl = open(build_file_path, 'w')
@@ -558,21 +560,14 @@ def main():
     ftp_interp = em.Interpreter(
             output=ftp_fl, globals=dict(globls),
             options={em.RAW_OPT : True, em.BUFFERED_OPT : True})
-    # write out ftp delete template
-    ftp_del = open(ftp_del_path, 'w')
-    ftp_del_interp = em.Interpreter(
-            output=ftp_del, globals=dict(globls),
-            options={em.RAW_OPT : True, em.BUFFERED_OPT : True})
     # load and process the template
     logger.debug("Processing template")
     ninja_interp.file(open(template_path))
     ftp_interp.file(open(template_ftp_path))
-    ftp_del_interp.file(open(template_ftp_del))
     # shutdown empy interpreters
     logger.debug("Shutting down empy")
     ninja_interp.shutdown()
     ftp_interp.shutdown()
-    ftp_del_interp.shutdown()
 
 
     # done

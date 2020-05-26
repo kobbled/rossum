@@ -83,6 +83,7 @@ rule tpp_ls
                $in $
                -o $out @[if len(ws.robot_ini.env) > 0]@ -e "@(ws.robot_ini.env)"@[end if]@
 
+@[if compiletp]@
 # .tpp -> .tp
 #
 # Run ls files through
@@ -92,6 +93,8 @@ rule tpp_tp
                -o $out @[if len(ws.robot_ini.env) > 0]@ -e "@(ws.robot_ini.env)"@[end if]@ $
                && "@(tools['tpp']['compile'])" $out /config "@(ws.robot_ini.path)" $
                && del $out
+
+@[end if]@
 
 
 
@@ -127,7 +130,8 @@ rule csv_csv
 build $build_dir\@(obj): @
 @[if '.kl' in src]@ ktrans_pc @[end if]@ @
 @[if '.ls' in src]@ maketp_tp @[end if]@ @
-@[if '.tpp' in src]@ tpp_tp @[end if]@ @
+@[if '.tpp' in src and compiletp]@ tpp_tp @[end if]@ @
+@[if '.tpp' in src and not compiletp]@ tpp_ls @[end if]@ @
 @[if '.yml' in src]@ yaml_xml @[end if]@ @
 @[if '.csv' in src]@ csv_csv @[end if]@ @
 $@(pkg.manifest.name)_dir\@(src)
