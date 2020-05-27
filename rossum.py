@@ -238,8 +238,10 @@ def main():
         help='build all objects source space depends on.')
     parser.add_argument('-g', '--keepgpp', action='store_true', dest='keepgpp',
         help='build all objects source space depends on.')
-    parser.add_argument('-t', '--compiletp', action='store_true', dest='compiletp',
+    parser.add_argument('-tp', '--compiletp', action='store_true', dest='compiletp',
         help='compile .tpp files into .tp files. If false will just interpret to .ls.')
+    parser.add_argument('-t', '--include-tests', action='store_true', dest='inc_tests',
+        help='include files for testing in build')
     parser.add_argument('--clean', action='store_true', dest='rossum_clean',
         help='clean all files out of build directory')
     parser.add_argument('src_dir', type=str, nargs='?', metavar='SRC',
@@ -469,7 +471,7 @@ def main():
         build_pkgs = src_space_pkgs
 
     # but only the pkgs in the source space(s) get their objects build
-    gen_obj_mappings(build_pkgs, tool_paths)
+    gen_obj_mappings(build_pkgs, tool_paths, args)
 
 
     # notify user of config
@@ -804,7 +806,7 @@ def resolve_includes_for_pkg(pkg, visited):
     return inc_dirs
 
 
-def gen_obj_mappings(pkgs, mappings):
+def gen_obj_mappings(pkgs, mappings, args):
     """ Updates the 'objects' member variable of each pkg with tuples of the
     form (path\to\a.kl, a.pc).
     """
@@ -823,15 +825,15 @@ def gen_obj_mappings(pkgs, mappings):
             logger.debug("    adding: {} -> {}".format(src, obj))
             pkg.objects.append((src, obj, build))
 
-        # TODO: refactor this: make test rule generation optional
-        for src in pkg.manifest.tests:
-            src = src.replace('/', '\\')
-            for (k, v) in mappings.items():
-                if '.' + v['from_suffix'] in src:
-                    obj = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['interp_suffix'])
-                    build = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['comp_suffix'])
-            logger.debug("    adding: {} -> {}".format(src, obj))
-            pkg.objects.append((src, obj, build))
+        if args.inc_tests:
+          for src in pkg.manifest.tests:
+              src = src.replace('/', '\\')
+              for (k, v) in mappings.items():
+                  if '.' + v['from_suffix'] in src:
+                      obj = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['interp_suffix'])
+                      build = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['comp_suffix'])
+              logger.debug("    adding: {} -> {}".format(src, obj))
+              pkg.objects.append((src, obj, build))
 
 
 def find_fr_install_dir(search_locs, is64bit=False):
