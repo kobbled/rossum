@@ -163,6 +163,15 @@ optional arguments:
   rossum C:\foo\bar\src -b
 ```
 
+## currently handled files
+
+* Karel (.kl)
+* LS files (.ls)
+* TP-Plus (.tpp)
+* JSON (.json)
+* YAML (.yaml)
+* CSV (.csv)
+
 ## robot.ini file example
 
 ```
