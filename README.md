@@ -1,5 +1,5 @@
 # rossum
-v0.1.7
+v0.2.0
 
 This is `rossum`, a CMake-like build file generator for Fanuc Robotics (Karel)
 projects.
@@ -33,7 +33,7 @@ actual build files.
 
 ## Installation
 
-The 0.1.4 release is a convenience release that includes all the necessary
+The 0.2.0 release is a convenience release that includes all the necessary
 tools to quickly setup a working installation of rossum. Download it from the
 [releases][] page.
 
@@ -102,16 +102,113 @@ optional arguments:
                         Location of robot.ini (default: source dir)
   -w, --overwrite       Overwrite any build file that may exist in the build
                         dir
-
-Usage example:
-
-  mkdir C:\foo\bar\build
-  cd C:\foo\bar\build
-  rossum C:\foo\bar\src
+  --ftp                 Use IP address in environment variable 
+                        'ENV_SERVER_IP' to send files in build folder to
+                        Controller with 'kpush' command.
+  -o --override         Will override environment variables with contents of
+                        robot.ini file.
+  -b --buildall         build all dependencies as well
+  -g --keepgpp          keep gpp preprocessor output in %TEMP% folder to
+                        evaluate bugs.
+  -tp --compiletp       compile .tpp files into .tp files. If false will 
+                        just interpret to .ls.
+  -t  --include-tests   include test files in build
+  --clean               clean all files out of build directory
 ```
 
 
+### Usage example
+
+**standard**
+
+```
+  mkdir C:\foo\bar\build
+  cd C:\foo\bar\build
+  rossum C:\foo\bar\src
+  kpush
+```
+
+**clean out build file**
+
+```
+  cd C:\foo\bar\build
+  rossum --clean
+```
+
+**use robot.ini version, and ip address**
+
+```
+  cd C:\foo\bar\build
+  rossum C:\foo\bar\src -o
+```
+
+**output test files from package.json**
+
+```
+  cd C:\foo\bar\build
+  rossum C:\foo\bar\src -t
+```
+
+**keep preprocessor output in %TEMP%**
+
+```
+  cd C:\foo\bar\build
+  rossum C:\foo\bar\src -g
+```
+
+**build all dependencies**
+
+```
+  cd C:\foo\bar\build
+  rossum C:\foo\bar\src -b
+```
+
+## robot.ini file example
+
+```
+[WinOLPC_Util]
+Robot=\C\Users\<user>\Documents\My Workcells\cell\Robot_1
+Version=V9.10-1
+Path=C:\Program Files (x86)\FANUC\WinOLPC\Versions\V910-1\bin
+Support=C:\Users\<user>\Documents\My Workcells\cell\Robot_1\support
+Output=C:\Users\<user>\Documents\My Workcells\cell\Robot_1\output
+Ftp=127.0.0.1
+Tpp-env=C:\Users\<user>\Documents\My Workcells\cell\tpp\vars.tpp
+```
+
+## package.json file example
+
+```json
+{
+  "manver" : "1",
+  "project" : "Strings",
+  "description" : "",
+  "version" : "0.0.2",
+  "license" : "MIT",
+  "author" : "onerobotics",
+  "source" : [
+    "src/strings.kl"
+  ],
+  "tests" : [
+    "test/test_strings.kl"
+  ],
+  "includes" : [
+    "include"
+  ],
+  "depends" : [
+    "KUnit"
+  ]
+}
+```
+
 ## Environment variables
+
+```
+set PATH=%PATH%;C:\path\to\rossum-0.1.4-distrib\
+set ROSSUM_CORE_VERSION=V910-1
+set ROSSUM_PKG_PATH \path\to\rossum\dependency\packages
+set ROSSUM_SERVER_IP 127.0.0.1
+```
 
 `rossum` checks for the existence of two environment variables and uses their
 contents to change its behaviour.
