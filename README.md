@@ -358,8 +358,8 @@ author of `rossum` is not affiliated with Fanuc in any way.
 
 
 [ninja]: https://ninja-build.org
-[ktransw]: https://github.com/gavanderhoorn/ktransw_py
+[ktransw]: https://github.com/kobbled/ktransw_py
 [EmPy]: https://pypi.python.org/pypi/EmPy
-[releases]: https://github.com/gavanderhoorn/rossum/releases
-[rossum_example_ws]: https://github.com/gavanderhoorn/rossum_example_ws
+[releases]: https://github.com/kobbled/rossum/releases
+[rossum_example_ws]: https://github.com/kobbled/rossum_example_ws
 [Installing Python on Windows]: http://docs.python-guide.org/en/latest/starting/install/win/
