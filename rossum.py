@@ -26,6 +26,7 @@
 
 
 import em
+import re
 import datetime
 import os, shutil
 import sys
@@ -123,7 +124,8 @@ RossumManifest = collections.namedtuple('RossumManifest',
     'name '
     'source '
     'tests '
-    'version'
+    'version '
+    'interfaces'
 )
 
 # a rossum package contains both raw, uninterpreted data (the manifest), as
@@ -169,6 +171,16 @@ packages = collections.namedtuple('packages',
     'name '
     'version '
     'inSource'
+)
+
+#TP program routine interfaces
+TPInterfaces = collections.namedtuple('TPInterfaces',
+    'name '
+    'alias '
+    'include_file '
+    'path '
+    'arguments '
+    'return_type'
 )
 
 
@@ -242,6 +254,9 @@ def main():
         help='compile .tpp files into .tp files. If false will just interpret to .ls.')
     parser.add_argument('-t', '--include-tests', action='store_true', dest='inc_tests',
         help='include files for testing in build')
+    parser.add_argument('-i', '--build-interfaces', action='store_true', dest='build_interface',
+        help='build tp interfaces for karel routines specified in package.json.'
+        'This is needed to use karel routines within a tp program')
     parser.add_argument('--clean', action='store_true', dest='rossum_clean',
         help='clean all files out of build directory')
     parser.add_argument('src_dir', type=str, nargs='?', metavar='SRC',
@@ -470,6 +485,12 @@ def main():
     else: 
         build_pkgs = src_space_pkgs
 
+    #create tp-interface karel files
+    if args.build_interface:
+        interfaces = get_interfaces(build_pkgs)
+        if interfaces:
+            create_interfaces(interfaces)
+
     # but only the pkgs in the source space(s) get their objects build
     gen_obj_mappings(build_pkgs, tool_paths, args)
 
@@ -623,7 +644,8 @@ def parse_manifest(fpath):
         source=mfest['source'] if 'source' in mfest else [],
         tests=mfest['tests'] if 'tests' in mfest else [],
         includes=mfest['includes'] if 'includes' in mfest else [],
-        depends=mfest['depends'] if 'depends' in mfest else [])
+        depends=mfest['depends'] if 'depends' in mfest else [],
+        interfaces=mfest['tp-interfaces'] if 'tp-interfaces' in mfest else [])
 
 
 def find_pkgs(dirs):
@@ -804,6 +826,108 @@ def resolve_includes_for_pkg(pkg, visited):
         for dep_pkg in pkg.dependencies:
             inc_dirs.extend(resolve_includes_for_pkg(dep_pkg, visited))
     return inc_dirs
+
+
+def get_interfaces(pkgs):
+    """Create interface karel programs for routines for use in
+       TP programs.
+    """
+    programs = []
+    for pkg in pkgs:
+        for include in  pkg.manifest.includes:
+            #get all .klh files in include directory
+            f_name = pkg.location + '\\' + include
+            inc_files = [f_name + "\\" + fl for fl in os.listdir(f_name) if fl.endswith(".klh")]
+            for interface in pkg.manifest.interfaces:
+                found_routine = False
+                #match routine specified in tp-interfaces
+                #interface['name'] will be the full name of the program
+                #interface['alias'] will be the 12 character limit program name sent to the controller
+                pattern = r"(?:ROUTINE\s*{0})\((?:\s*(\w+)\s*\:\s*(\w+)\s*;?)+\)\s*(?:\:\s*(\w+)\s*FROM\s*\w+)".format(interface['routine'])
+                for fname in inc_files:
+                    if found_routine : break #have found the routine and parsed move to next interface
+                    #search through each .klh file
+                    with open(fname,"r") as f:
+                        lines = f.readlines()
+                        for ln in lines :
+                            m = re.match(pattern, ln)
+                            if m:
+                                #find all of the arguments and their types
+                                # *** This will not work if formated
+                                # *** ROUTINE t(v1,v2,v3 : INTEGER)
+                                # *** must be formatted
+                                # *** ROTUINE t(v1 : INTEGER; v2 : INTEGER; v3 : INTEGER)
+                                routine = m.group()
+                                var_matches = re.findall(r"(\w+)\s*\:\s*(\w+)",routine)
+                                arguments = []
+                                for v in var_matches:
+                                    arguments.append([v[0], v[1]])
+
+                                programs.append(TPInterfaces(
+                                    name= interface['routine'],
+                                    alias= interface['program_name'],
+                                    include_file= os.path.basename(fname),
+                                    path= '{}\\tp\\{}.kl'.format(pkg.location, interface['program_name']),
+                                    arguments= arguments,
+                                    return_type= m.group(3)
+                                ))
+                                #add to source files
+                                pkg.manifest.source.append('tp/{}.kl'.format(interface['program_name']))
+                                # outer loop break control
+                                found_routine = True
+                                break
+
+    return programs
+
+def create_interfaces(interfaces):
+    for interface in interfaces:
+        program = "PROGRAM {0}\n" \
+                  "%NOBUSYLAMP\n" \
+                  "%NOLOCKGROUP\n" \
+                  "\n" \
+                  "VAR\n".format(interface.alias)
+
+        #if return type first tpe argument should be return register
+        if interface.return_type:
+            program += '\treg_no : INTEGER\n'
+
+        # make arguments
+        for args in interface.arguments:
+            program += '\t{0} : {1}\n'.format(args[0], args[1])
+        
+        program += "%include tpe.klh\n" \
+                   "%include registers.klh\n"
+        #include header files
+        program += "%include {}\n\n".format(interface.include_file)
+        program += "BEGIN\n"
+        i = 1
+        # tpe arguments
+        arg_list = []
+        for args in interface.arguments:
+            program += '\t{0} = tpe__get_{1}_arg({2})\n'.format(args[0], args[1].lower(), i)
+            arg_list.append(args[0])
+            i += 1
+        
+        #set return register
+        if interface.return_type:
+            program += '\treg_no = tpe__get_int_arg({})\n'.format(i)
+            i += 1
+        
+        #set return and karel routine
+        if interface.return_type:
+            arg_str = ",".join(arg_list)
+            program += '\tregisters__set_{0}(reg_no, {1}({2}))\n'.format(interface.return_type.lower(), interface.name, arg_str)
+        else:
+            #if not return type just run function
+            program += '\t{1}({2})\n'.format(interface.name, arg_str)
+
+        program += 'END {}'.format(interface.alias)
+
+        #save program to path
+        if not os.path.exists(os.path.dirname(interface.path)):
+            os.makedirs(os.path.dirname(interface.path))
+        with open(interface.path, 'w+') as fl:
+            fl.write(program)
 
 
 def gen_obj_mappings(pkgs, mappings, args):
