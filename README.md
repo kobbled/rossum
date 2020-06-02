@@ -113,6 +113,9 @@ optional arguments:
   -tp --compiletp       compile .tpp files into .tp files. If false will 
                         just interpret to .ls.
   -t  --include-tests   include test files in build
+  -i  --build-interfaces   build tp interfaces for karel 
+                        routines specified in package.json.
+                        This is needed to use karel routines within a tp program
   --clean               clean all files out of build directory
 ```
 
@@ -147,6 +150,13 @@ optional arguments:
 ```
   cd C:\foo\bar\build
   rossum C:\foo\bar\src -t
+```
+
+**build programs to interface karel routines in TP programs**
+
+```
+  cd C:\foo\bar\build
+  rossum C:\foo\bar\src -i
 ```
 
 **keep preprocessor output in %TEMP%**
@@ -190,22 +200,32 @@ Tpp-env=C:\Users\<user>\Documents\My Workcells\cell\tpp\vars.tpp
 ```json
 {
   "manver" : "1",
-  "project" : "Strings",
+  "project" : "kl-lib",
   "description" : "",
   "version" : "0.0.2",
   "license" : "MIT",
-  "author" : "onerobotics",
+  "author" : "name",
   "source" : [
-    "src/strings.kl"
+    "src/source.kl"
   ],
   "tests" : [
-    "test/test_strings.kl"
+    "test/test_source.kl"
   ],
   "includes" : [
     "include"
   ],
   "depends" : [
-    "KUnit"
+    "KUnit",
+    "Strings",
+    "math",
+    "registers",
+    "TPElib",
+    "ktransw-macros"
+  ]
+  ,
+  "tp-interfaces" : [
+    {"routine" : "source__func01", "program_name" : "func01"},
+    {"routine" : "source__func02", "program_name" : "func02"},
   ]
 }
 ```
