@@ -7,28 +7,20 @@ projects.
 
 ## Overview
 
-This tool introduces a package based workflow for Karel development: packages
-are directories that contain a marker file (a *manifest*) that contains some
-metadata describing the dependencies of that package and any translatable
-targets. Detection of packages and generation of the build file is done once
-at configuration time, relying on the build tool's dependency resolution to
-build all targets in the correct order.
+This tool introduces a package based workflow for Karel development: packages are directories that contain a marker file (a *manifest*) that contains some metadata describing the dependencies of that package and any translatable targets. Detection of packages and generation of the build file is done once at configuration time, relying on the build tool's dependency resolution to build all targets in the correct order.
 
 
 ## Requirements
 
-`rossum` was written on a Python 2 system, but user testing confirms it also
-works with Python 3.
-
-The generated Ninja build files require a recent (> 1.7.1) version of [Ninja][]
-to be present.
-
-For translating Karel sources, `rossum` expects [ktransw][] version 0.2.2 or
-newer. Refer to the `ktransw` documentation for any additional requirements
-that `ktransw` may have.
-
-Finally, `rossum` uses [EmPy][] for transforming the build file template to the
-actual build files.
+* `rossum` was written in Python 3. Python dependencies can be installed with
+```python
+pip install -r requirements.txt
+```
+* This package will only work on Windows. Karel compilers currently have no support on linux machines, nor does Roboguide.
+* The generated Ninja build files require a recent (> 1.7.1) version of [Ninja][] to be present.
+* For translating Karel sources, `rossum` expects [ktransw][] version 0.2.2 or newer. Refer to the `ktransw` documentation for any additional requirements that `ktransw` may have.
+* yaml and json conversion into xml is done with the [yamljson2xml](https://github.com/kobbled/yamljson2xml) python package. Follow readme file of the repository to install.
+* FANUC Roboguide must also be installed with OPLC bin programs, **maketp**, **ktrans**, and **setrobot**. An emulation of your workcell should be made through Roboguide or OLPCpro, typically stored in *%USERPROFILE%/Documents\My Workcells*.
 
 
 ## Installation
@@ -51,15 +43,86 @@ to specify the path to `ktransw.cmd` as a command line argument to `rossum`.
 Note that this would have to be repeated each time a new build directory is
 created.
 
-See [Installing Python on Windows][] in the HHGtP for information on how to
-install Python on Windows.
+## Examples
 
-[EmPy][] can be installed with `pip` with `pip install empy` in a Windows
-command shell session. Usage and installation of `pip` is covered in
-[Installing Python on Windows][].
+Please see [rossum_example_ws][] for an example workspace with some packages
+that show how to use `rossum`.
+
+## currently handled files
+
+* Karel (.kl)
+* LS files (.ls)
+* TP-Plus (.tpp)
+* JSON (.json)
+* YAML (.yaml)
+* CSV (.csv)
 
 
 ## Usage
+
+**standard**
+
+```
+  mkdir C:\foo\bar\build
+  cd C:\foo\bar\build
+  rossum C:\foo\bar\src
+  kpush
+```
+
+**clean out build file**
+
+```
+  cd C:\foo\bar\build
+  rossum --clean
+```
+
+**use robot.ini version, and ip address**
+
+```
+  cd C:\foo\bar\build
+  rossum C:\foo\bar\src -o
+```
+
+**output test files from package.json**
+
+```
+  cd C:\foo\bar\build
+  rossum C:\foo\bar\src -t
+```
+
+**build programs to interface karel routines in TP programs**
+
+```
+  cd C:\foo\bar\build
+  rossum C:\foo\bar\src -i
+```
+
+> **_NOTE:_**  This option depends on the [kl-TPE](https://github.com/kobbled/kl-TPE) and [kl-registers](https://github.com/kobbled/kl-registers) packages from the [Ka-Boost](https://github.com/kobbled/Ka-Boost) libraries. If Ka-Boost is installed make sure to add theses libraries to the dependencies of the package you are build in with this option.
+
+```json
+{
+  "depends" : [
+    "registers",
+    "TPElib"
+  ]
+}
+```
+
+**keep preprocessor output in %TEMP%**
+
+```
+  cd C:\foo\bar\build
+  rossum C:\foo\bar\src -g
+```
+
+**build all dependencies**
+
+```
+  cd C:\foo\bar\build
+  rossum C:\foo\bar\src -b
+```
+
+**--help output**
 
 ```
 usage: rossum [-h] [-v] [-V] [-q] [--rg64] [-c ID] [--support PATH] [-d]
@@ -119,70 +182,9 @@ optional arguments:
   --clean               clean all files out of build directory
 ```
 
-
-### Usage example
-
-**standard**
-
-```
-  mkdir C:\foo\bar\build
-  cd C:\foo\bar\build
-  rossum C:\foo\bar\src
-  kpush
-```
-
-**clean out build file**
-
-```
-  cd C:\foo\bar\build
-  rossum --clean
-```
-
-**use robot.ini version, and ip address**
-
-```
-  cd C:\foo\bar\build
-  rossum C:\foo\bar\src -o
-```
-
-**output test files from package.json**
-
-```
-  cd C:\foo\bar\build
-  rossum C:\foo\bar\src -t
-```
-
-**build programs to interface karel routines in TP programs**
-
-```
-  cd C:\foo\bar\build
-  rossum C:\foo\bar\src -i
-```
-
-**keep preprocessor output in %TEMP%**
-
-```
-  cd C:\foo\bar\build
-  rossum C:\foo\bar\src -g
-```
-
-**build all dependencies**
-
-```
-  cd C:\foo\bar\build
-  rossum C:\foo\bar\src -b
-```
-
-## currently handled files
-
-* Karel (.kl)
-* LS files (.ls)
-* TP-Plus (.tpp)
-* JSON (.json)
-* YAML (.yaml)
-* CSV (.csv)
-
 ## robot.ini file example
+
+create robot.ini file in the top level of the source directory calling **setrobot** through a command prompt, and selecting the correct workcell created with Roboguide. *Ftp*, and *Tpp-env* will need to be added afterwards as they are Rossum specific directives.
 
 ```
 [WinOLPC_Util]
@@ -257,12 +259,6 @@ Example: to make version 8.30 of the support files the default set
 `ROSSUM_CORE_VERSION` to `V8.30-1`.
 
 
-## Examples
-
-Please see [rossum_example_ws][] for an example workspace with some packages
-that show how to use `rossum`.
-
-
 ## Glossary
 
 Terminology used by `rossum`.
@@ -290,64 +286,6 @@ The sub directory of the *workspace* that will store all the build output
 ### build file
 The ninja build file generated by `rossum` at the end of the configuration
 phase.
-
-
-## FAQ
-
-#### Does this run on Windows?
-Yes, it only runs on Windows, actually.
-
-#### Is Roboguide (still) needed?
-`rossum` only generates build files, it does not replace `ktrans` or Roboguide,
-so depending on your project's requirements (is it Karel only? Do you need to
-translate TP programs, etc), yes, you still need Roboguide.
-
-#### Does this work with just WinOLPC or OlpcPRO?
-I haven't tested it explicitly, but it should work. Auto-detection of the
-location of `ktrans` will probably need some work. If you are willing to assist,
-please contact me.
-
-#### I pointed rossum to my Roboguide workcell directory, but it doesn't work
-`rossum` only recognises directories that contain a so called *manifest*: a
-JSON file that describes what `rossum` should do with the files in the package.
-It doesn't currently understand Roboguide workcells (`.frw` and others), but
-that may change in future versions.
-
-#### Copying a build file to another build directory doesn't work
-`rossum` generates build files with absolute paths. Moving the build file to
-another directory is possible, but compilation artefacts (`.pc`) will still
-be placed in the build directory that was used when generating the file.
-
-This may change in future versions (see `TODO.md`).
-
-#### How do I translate my sources for a different core version?
-`rossum` by default will configure the build file to use the `V7.70-1` version
-of the system core files. This can be changed at generation time using the 
-`--core` command line option for setting a default that will persist as long
-as the build file remains unchanged.
-
-See the output of `ktrans /?` for a list of supported core versions.
-
-#### I don't want to open-source my Karel projects, can I still use this?
-Of course: you are not required to open-source anything. The licenses used
-in the [rossum_example_ws][] workspace are just examples. `rossum` does not
-use the information in the `license` key at this time, so there are no
-restrictions on the values allowed there.
-
-#### Why use JSON for the manifests, and not YAML/xml/X?
-I wanted to keep `rossum` as easy to install as possible, and also not burden
-users (developers) with having to create/maintain too much metadata. Of the
-file formats supported by the Python Standard Library, JSON seemed like a
-good fit with the requirements for the manifests: hierarchical, support for
-key-value pairs, lists and easy to edit. PyYAML needs to be installed on
-Windows, and xml is a bit too verbose (and easy to get wrong when editing).
-
-Depending on the needs, `rossum` might move to YAML in the future.
-
-#### Your code is a mess
-Yes. As is often the case, `rossum` was basically needed *yesterday*, and as
-such hasn't received the attention and thought it deserve(s)(d). Refactoring
-is on the `TODO.md` list though.
 
 
 ## Disclaimer
