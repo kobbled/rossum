@@ -905,7 +905,8 @@ def create_interfaces(interfaces):
         # tpe arguments
         arg_list = []
         for args in interface.arguments:
-            program += '\t{0} = tpe__get_{1}_arg({2})\n'.format(args[0], args[1].lower(), i)
+            t_arg = 'int' if args[1].lower() == 'integer' else args[1].lower()
+            program += '\t{0} = tpe__get_{1}_arg({2})\n'.format(args[0], t_arg, i)
             arg_list.append(args[0])
             i += 1
         
@@ -916,8 +917,9 @@ def create_interfaces(interfaces):
         
         #set return and karel routine
         if interface.return_type:
+            t_return = 'int' if interface.return_type.lower() == 'integer' else interface.return_type.lower()
             arg_str = ",".join(arg_list)
-            program += '\tregisters__set_{0}(reg_no, {1}({2}))\n'.format(interface.return_type.lower(), interface.name, arg_str)
+            program += '\tregisters__set_{0}(reg_no, {1}({2}))\n'.format(t_return, interface.name, arg_str)
         else:
             #if not return type just run function
             program += '\t{1}({2})\n'.format(interface.name, arg_str)
