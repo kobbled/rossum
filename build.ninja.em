@@ -67,6 +67,7 @@ rule ktrans_pc
   depfile = $out.d
   deps = gcc
 
+@[if compiletp]@
 # .ls -> .tp
 #
 # Run ls files through
@@ -74,14 +75,15 @@ rule maketp_tp
   command = "@(tools['maketp']['path'])" $
                $in $
                /config "@(ws.robot_ini.path)"
-
-# .tpp -> .ls
+@[else]@
+# .ls -> .ls
 #
 # Run ls files through
-rule tpp_ls
-  command = "@(tools['tpp']['path'])" $
-               $in $
-               -o $out @[if len(ws.robot_ini.env) > 0]@ -e "@(ws.robot_ini.env)"@[end if]@
+rule maketp_ls
+  command = "@(tools['maketp']['path'])" /y /q $
+               "$in" $
+               "$build_dir" $
+@[end if]@
 
 @[if compiletp]@
 # .tpp -> .tp
@@ -93,7 +95,14 @@ rule tpp_tp
                -o $out @[if len(ws.robot_ini.env) > 0]@ -e "@(ws.robot_ini.env)"@[end if]@ $
                && "@(tools['tpp']['compile'])" $out /config "@(ws.robot_ini.path)" $
                && del $out
-
+@[else]@
+# .tpp -> .ls
+#
+# Run ls files through
+rule tpp_ls
+  command = "@(tools['tpp']['path'])" $
+               $in $
+               -o $out @[if len(ws.robot_ini.env) > 0]@ -e "@(ws.robot_ini.env)"@[end if]@
 @[end if]@
 
 
@@ -129,7 +138,8 @@ rule csv_csv
 @[for (src, obj, _) in pkg.objects]@
 build $build_dir\@(obj): @
 @[if '.kl' in src]@ ktrans_pc @[end if]@ @
-@[if '.ls' in src]@ maketp_tp @[end if]@ @
+@[if '.ls' in src and compiletp]@ maketp_tp @[end if]@ @
+@[if '.ls' in src and not compiletp]@ maketp_ls @[end if]@ @
 @[if '.tpp' in src and compiletp]@ tpp_tp @[end if]@ @
 @[if '.tpp' in src and not compiletp]@ tpp_ls @[end if]@ @
 @[if '.yml' in src]@ yaml_xml @[end if]@ @
