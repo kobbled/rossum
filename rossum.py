@@ -493,7 +493,7 @@ def main():
             create_interfaces(interfaces)
 
     # but only the pkgs in the source space(s) get their objects build
-    gen_obj_mappings(build_pkgs, tool_paths, args)
+    gen_obj_mappings(build_pkgs, tool_paths, args, dependency_graph)
 
 
     # notify user of config
@@ -933,7 +933,7 @@ def create_interfaces(interfaces):
             fl.write(program)
 
 
-def gen_obj_mappings(pkgs, mappings, args):
+def gen_obj_mappings(pkgs, mappings, args, dep_graph):
     """ Updates the 'objects' member variable of each pkg with tuples of the
     form (path\to\a.kl, a.pc).
     """
@@ -952,7 +952,7 @@ def gen_obj_mappings(pkgs, mappings, args):
             logger.debug("    adding: {} -> {}".format(src, obj))
             pkg.objects.append((src, obj, build))
 
-        if args.inc_tests:
+        if (args.inc_tests) and any(pkg.manifest.name in x.name for x in dep_graph.root):
           for src in pkg.manifest.tests:
               src = src.replace('/', '\\')
               for (k, v) in mappings.items():
