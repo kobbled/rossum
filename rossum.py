@@ -844,7 +844,7 @@ def get_interfaces(pkgs):
                 #match routine specified in tp-interfaces
                 #interface['name'] will be the full name of the program
                 #interface['alias'] will be the 12 character limit program name sent to the controller
-                pattern = r"(?:ROUTINE\s*{0})\((?:\s*(\w+)\s*\:\s*(\w+)\s*;?)+\)\s*(?:\:\s*(\w+)\s*FROM\s*\w+)".format(interface['routine'])
+                pattern = r"(?:ROUTINE\s*{0})\s*\(?(?:\s*(\w+)\s*\:\s*(\w+)\s*;?)*\)?\s*(?:\:\s*(\w+)\s*FROM\s*\w+)".format(interface['routine'])
                 for fname in inc_files:
                     if found_routine : break #have found the routine and parsed move to next interface
                     #search through each .klh file
@@ -859,7 +859,7 @@ def get_interfaces(pkgs):
                                 # *** must be formatted
                                 # *** ROTUINE t(v1 : INTEGER; v2 : INTEGER; v3 : INTEGER)
                                 routine = m.group()
-                                var_matches = re.findall(r"(\w+)\s*\:\s*(\w+)",routine)
+                                var_matches = re.findall(r"(\w+)\s*\:\s*(\w+)\s*(;|\))",routine)
                                 arguments = []
                                 for v in var_matches:
                                     arguments.append([v[0], v[1]])
@@ -918,8 +918,11 @@ def create_interfaces(interfaces):
         #set return and karel routine
         if interface.return_type:
             t_return = 'int' if interface.return_type.lower() == 'integer' else interface.return_type.lower()
-            arg_str = ",".join(arg_list)
-            program += '\tregisters__set_{0}(reg_no, {1}({2}))\n'.format(t_return, interface.name, arg_str)
+            if interface.arguments:
+              arg_str = ",".join(arg_list)
+              program += '\tregisters__set_{0}(reg_no, {1}({2}))\n'.format(t_return, interface.name, arg_str)
+            else:
+              program += '\tregisters__set_{0}(reg_no, {1})\n'.format(t_return, interface.name)
         else:
             #if not return type just run function
             program += '\t{1}({2})\n'.format(interface.name, arg_str)
