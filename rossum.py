@@ -844,7 +844,7 @@ def get_interfaces(pkgs):
                 #match routine specified in tp-interfaces
                 #interface['name'] will be the full name of the program
                 #interface['alias'] will be the 12 character limit program name sent to the controller
-                pattern = r"(?:ROUTINE\s*{0})\s*\(?(?:\s*(\w+)\s*\:\s*(\w+)\s*;?)*\)?\s*(?:\:\s*(\w+)\s*FROM\s*\w+)".format(interface['routine'])
+                pattern = r"(?:ROUTINE\s*{0})\s*\(?(?:\s*(\w+)\s*\:\s*(\w+)\s*;?)*\)?\s*(?:\:\s*(\w+))?\s*(?:FROM\s*\w+)".format(interface['routine'])
                 for fname in inc_files:
                     if found_routine : break #have found the routine and parsed move to next interface
                     #search through each .klh file
@@ -864,13 +864,19 @@ def get_interfaces(pkgs):
                                 for v in var_matches:
                                     arguments.append([v[0], v[1]])
 
+                                #store return type
+                                if m.group(3):
+                                  ret_type = m.group(3)
+                                else:
+                                  ret_type = ''
+
                                 programs.append(TPInterfaces(
                                     name= interface['routine'],
                                     alias= interface['program_name'],
                                     include_file= os.path.basename(fname),
                                     path= '{}\\tp\\{}.kl'.format(pkg.location, interface['program_name']),
                                     arguments= arguments,
-                                    return_type= m.group(3)
+                                    return_type= ret_type
                                 ))
                                 #add to source files
                                 pkg.manifest.source.append('tp/{}.kl'.format(interface['program_name']))
@@ -896,10 +902,30 @@ def create_interfaces(interfaces):
         for args in interface.arguments:
             program += '\t{0} : {1}\n'.format(args[0], args[1])
         
-        program += "%include tpe.klh\n" \
-                   "%include registers.klh\n"
+        # load applicable tpe interfaces
+        program += "%from tpe.klh %import "
+        #use set to remove duplicates
+        load_funcs = set()
+        for args in interface.arguments:
+          t_arg = 'int' if args[1].lower() == 'integer' else args[1].lower()
+          load_funcs.add("get_{0}_arg".format(t_arg))
+        if interface.return_type:
+          load_funcs.add("get_int_arg")
+        #add function list to program
+        funcs_str = ''
+        for func in load_funcs:
+          funcs_str += str(func) + ','
+        #take out last comma
+        program += funcs_str[:-1] + "\n"
+        
+        #load write to register function
+        if interface.return_type:
+          t_return = 'int' if interface.return_type.lower() == 'integer' else interface.return_type.lower()
+          program += "%from registers.klh %import set_{0}\n".format(t_return)
+
         #include header files
-        program += "%include {}\n\n".format(interface.include_file)
+        func_name = interface.name.split('__')[-1] # assuming formating is 'namespace__function'
+        program += "%from {0} %import {1}\n\n".format(interface.include_file, func_name)
         program += "BEGIN\n"
         i = 1
         # tpe arguments
@@ -925,7 +951,11 @@ def create_interfaces(interfaces):
               program += '\tregisters__set_{0}(reg_no, {1})\n'.format(t_return, interface.name)
         else:
             #if not return type just run function
-            program += '\t{1}({2})\n'.format(interface.name, arg_str)
+            if interface.arguments:
+              arg_str = ",".join(arg_list)
+              program += '\t{0}({1})\n'.format(interface.name, arg_str)
+            else:
+              program += '\t{1}\n'.format(interface.name)
 
         program += 'END {}'.format(interface.alias)
 
