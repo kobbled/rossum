@@ -891,8 +891,10 @@ def create_interfaces(interfaces):
         program = "PROGRAM {0}\n" \
                   "%NOBUSYLAMP\n" \
                   "%NOLOCKGROUP\n" \
-                  "\n" \
-                  "VAR\n".format(interface.alias)
+                  "\n".format(interface.alias)
+
+        if interface.return_type or interface.arguments:
+          program += 'VAR\n'
 
         #if return type first tpe argument should be return register
         if interface.return_type:
@@ -903,7 +905,9 @@ def create_interfaces(interfaces):
             program += '\t{0} : {1}\n'.format(args[0], args[1])
         
         # load applicable tpe interfaces
-        program += "%from tpe.klh %import "
+        if interface.return_type or interface.arguments:
+          program += "%from tpe.klh %import "
+        
         #use set to remove duplicates
         load_funcs = set()
         for args in interface.arguments:
@@ -955,7 +959,7 @@ def create_interfaces(interfaces):
               arg_str = ",".join(arg_list)
               program += '\t{0}({1})\n'.format(interface.name, arg_str)
             else:
-              program += '\t{1}\n'.format(interface.name)
+              program += '\t{0}\n'.format(interface.name)
 
         program += 'END {}'.format(interface.alias)
 
