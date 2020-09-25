@@ -893,16 +893,40 @@ def create_interfaces(interfaces):
                   "%NOLOCKGROUP\n" \
                   "\n".format(interface.alias)
 
+        pose_types = ('position', 'xyzwpr', 'jointpos')
+        
         if interface.return_type or interface.arguments:
           program += 'VAR\n'
 
         #if return type first tpe argument should be return register
         if interface.return_type:
-            program += '\treg_no : INTEGER\n'
+            program += '\tout_reg : INTEGER\n'
+            if interface.return_type.lower() in pose_types:
+              program += '\tout_grp : INTEGER\n'
 
         # make arguments
+        i = 1
+        pr_dict = {}
         for args in interface.arguments:
+            if args[1].lower() in pose_types:
+              program += '\tpr_num{0} : INTEGER\n'.format(i)
+              # key = pr_variable : val = group_num
+              # if no group num is specified mark value as 'None'
+              pr_dict['pr_num{0}'.format(i)] = {'index' : i, 'group' : 'None', 'type' : args[1].lower(), 'map_var' : args[0] }
+            
             program += '\t{0} : {1}\n'.format(args[0], args[1])
+            i += 1
+        
+        #flag if groups are specified
+        is_groups = False
+        #do second pass through pr_dict to replace any groups with specified arguement
+        if any(args[1].lower() in pose_types for args in interface.arguments):
+          i = 1
+          for args in interface.arguments:
+            if args[0].lower() in 'grp_no':
+              is_groups = True
+              pr_dict['pr_num{0}'.format(i)]['group'] = args[0].lower()
+              i += 1
         
         # load applicable tpe interfaces
         if interface.return_type or interface.arguments:
@@ -927,32 +951,70 @@ def create_interfaces(interfaces):
           t_return = 'int' if interface.return_type.lower() == 'integer' else interface.return_type.lower()
           program += "%from registers.klh %import set_{0}\n".format(t_return)
 
+        #include function for handling position types
+        if any(args[1].lower() in pose_types for args in interface.arguments):
+          program += "%from pose.klh %import get_posreg_xyz, get_posreg_joint, set_posreg_xyz, set_posreg_joint\n"
+
+
         #include header files
         func_name = interface.name.split('__')[-1] # assuming formating is 'namespace__function'
         program += "%from {0} %import {1}\n\n".format(interface.include_file, func_name)
         program += "BEGIN\n"
-        i = 1
         # tpe arguments
         arg_list = []
+        i = 1
         for args in interface.arguments:
             t_arg = 'int' if args[1].lower() == 'integer' else args[1].lower()
-            program += '\t{0} = tpe__get_{1}_arg({2})\n'.format(args[0], t_arg, i)
+
+            if args[1].lower() in pose_types:
+              if args[1].lower() in ['xyzwpr','position']: t_arg = 'xyz'
+              if args[1].lower() in 'jointpos': t_arg = 'joint'
+              
+              program += '\tpr_num{0} = tpe__get_int_arg({0})\n'.format(i)
+            else:
+              program += '\t{0} = tpe__get_{1}_arg({2})\n'.format(args[0], t_arg, i)
+
             arg_list.append(args[0])
             i += 1
         
+        # add calls to retrieve position register
+        for key, value in pr_dict.items():
+          if value['type'] in ['xyzwpr','position']: value['type'] = 'xyz'
+          if value['type'] in 'jointpos': value['type'] = 'joint'
+
+          if value['group'] == 'None':
+            program += '\t{0} = pose__get_posreg_{1}({2}, 1)\n'.format(value['map_var'], value['type'], key)
+          else:
+            program += '\t{0} = pose__get_posreg_{1}({2}, {3})\n'.format(value['map_var'], value['type'], key, value['group'])
+
+        
         #set return register
         if interface.return_type:
-            program += '\treg_no = tpe__get_int_arg({})\n'.format(i)
-            i += 1
+          program += '\tout_reg = tpe__get_int_arg({})\n'.format(i)
+          i += 1
+        
+        #set arguement for group number if return type is a position
+        if interface.return_type.lower() in pose_types and is_groups:
+          program += '\tout_grp = tpe__get_int_arg({})\n'.format(i)
+          i += 1
         
         #set return and karel routine
         if interface.return_type:
             t_return = 'int' if interface.return_type.lower() == 'integer' else interface.return_type.lower()
+            if interface.return_type.lower() in ['xyzwpr', 'position']: t_return = 'xyz'
+            if interface.return_type.lower() in 'jointpos': t_return = 'joint'
+
             if interface.arguments:
               arg_str = ",".join(arg_list)
-              program += '\tregisters__set_{0}(reg_no, {1}({2}))\n'.format(t_return, interface.name, arg_str)
+              if interface.return_type.lower() in pose_types:
+                if is_groups:
+                  program += '\tpose__set_posreg_{0}({1}({2}), out_reg, out_grp)\n'.format(t_return, interface.name, arg_str)
+                else:
+                  program += '\tpose__set_posreg_{0}({1}({2}), out_reg, 1)\n'.format(t_return, interface.name, arg_str)
+              else:
+                program += '\tregisters__set_{0}(out_reg, {1}({2}))\n'.format(t_return, interface.name, arg_str)
             else:
-              program += '\tregisters__set_{0}(reg_no, {1})\n'.format(t_return, interface.name)
+              program += '\tregisters__set_{0}(out_reg, {1})\n'.format(t_return, interface.name)
         else:
             #if not return type just run function
             if interface.arguments:
