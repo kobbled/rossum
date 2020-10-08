@@ -109,7 +109,6 @@ rule tpp_ls
 
 # .yaml -> .xml
 #
-# Run ls files through
 rule yaml_xml
   command = "@(tools['yaml']['path'])" $
                $in $
@@ -117,11 +116,30 @@ rule yaml_xml
 
 # .csv -> .csv
 #
-# Run ls files through
 rule csv_csv
   command = "@(tools['csv']['path'])" /y /q $
                "$in" $
                "$build_dir" $
+
+# .utx -> .tx, .vr
+#
+rule utx_tx
+  command = "@(tools['kcdict']['path'])" $
+               @(keepgpp) $
+               $lib_includes $
+               "$in" $
+               "$build_dir" $
+               /config "@(ws.robot_ini.path)"
+
+# .ftx -> .tx, .vr
+#
+rule ftx_tx
+  command = "@(tools['kcform']['path'])" $
+               @(keepgpp) $
+               $lib_includes $
+               "$in" $
+               "$build_dir" $
+               /config "@(ws.robot_ini.path)"
 
 
 ### build statements ###########################################################
@@ -144,6 +162,8 @@ build $build_dir\@(obj): @
 @[if '.tpp' in src and not compiletp]@ tpp_ls @[end if]@ @
 @[if '.yml' in src]@ yaml_xml @[end if]@ @
 @[if '.csv' in src]@ csv_csv @[end if]@ @
+@[if '.utx' in src]@ utx_tx @[end if]@ @
+@[if '.ftx' in src]@ ftx_tx @[end if]@ @
 $@(pkg.manifest.name)_dir\@(src)
   lib_includes = $@(pkg.manifest.name)_include_flags
   description = @(pkg.manifest.name) :: @(src)

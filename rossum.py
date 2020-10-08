@@ -56,6 +56,10 @@ TPP_INTERP_SUFFIX = 'ls'
 YAML_SUFFIX = 'yml'
 XML_SUFFIX = 'xml'
 CSV_SUFFIX = 'csv'
+FORM_SUFFIX = 'ftx'
+DICT_SUFFIX = 'utx'
+COMPRESSED_SUFFIX = 'tx'
+
 
 ENV_PKG_PATH='ROSSUM_PKG_PATH'
 ENV_DEFAULT_CORE_VERSION='ROSSUM_CORE_VERSION'
@@ -79,6 +83,7 @@ KTRANSW_BIN_NAME='ktransw.cmd'
 MAKETP_BIN_NAME='maketp.exe'
 TPP_BIN_NAME='tpp.bat'
 XML_BIN_NAME='yamljson2xml.cmd'
+KCDICT_BIN_NAME='kcdictw.cmd'
 
 KTRANS_SEARCH_PATH = [
     'C:\\Program Files\\Fanuc\\WinOLPC\\bin',
@@ -362,7 +367,7 @@ def main():
             sys.exit(_OS_EX_DATAERR)
 
     #make list of tool names
-    tools = [KTRANS_BIN_NAME, KTRANSW_BIN_NAME, MAKETP_BIN_NAME, TPP_BIN_NAME, XML_BIN_NAME]
+    tools = [KTRANS_BIN_NAME, KTRANSW_BIN_NAME, MAKETP_BIN_NAME, TPP_BIN_NAME, XML_BIN_NAME, KCDICT_BIN_NAME]
     # preset list of paths to search for paths
     search_locs = []
     search_locs.extend(KTRANS_SEARCH_PATH)
@@ -375,7 +380,9 @@ def main():
         'ktrans' : {'from_suffix' : '0', 'to_suffix' : '0', 'path' : path_lst[0]},
         'ktransw' : {'from_suffix' : KL_SUFFIX, 'interp_suffix' : PCODE_SUFFIX, 'comp_suffix' : PCODE_SUFFIX, 'path' : (args.ktransw or path_lst[1])},
         'yaml' : {'from_suffix' : YAML_SUFFIX, 'interp_suffix' : XML_SUFFIX,  'comp_suffix' : XML_SUFFIX, 'path' : path_lst[4]},
-        'csv' : {'from_suffix' : CSV_SUFFIX, 'interp_suffix' : CSV_SUFFIX,  'comp_suffix' : CSV_SUFFIX, 'path' : 'C:\\Windows\\SysWOW64\\xcopy.exe'}
+        'csv' : {'from_suffix' : CSV_SUFFIX, 'interp_suffix' : CSV_SUFFIX,  'comp_suffix' : CSV_SUFFIX, 'path' : 'C:\\Windows\\SysWOW64\\xcopy.exe'},
+        'kcdict' : {'from_suffix' : DICT_SUFFIX, 'interp_suffix' : COMPRESSED_SUFFIX, 'comp_suffix' : COMPRESSED_SUFFIX, 'path' : path_lst[5]},
+        'kcform' : {'from_suffix' : FORM_SUFFIX, 'interp_suffix' : COMPRESSED_SUFFIX, 'comp_suffix' : COMPRESSED_SUFFIX, 'path' : path_lst[5]}
     }
     #for tpp decide if just interpreting, or compiling to tp
     if args.compiletp:

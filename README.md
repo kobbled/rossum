@@ -1,5 +1,5 @@
 # rossum
-v0.2.0
+v0.2.1
 
 This is `rossum`, a CMake-like build file generator for Fanuc Robotics (Karel)
 projects.
@@ -56,6 +56,10 @@ that show how to use `rossum`.
 * JSON (.json)
 * YAML (.yaml)
 * CSV (.csv)
+* FANUC Dictionary (.utx)
+* FANUC Form (.ftx)
+
+> **_NOTE:_** Look at the User Form example in [rossum_example_ws][], *basic_test\lib_a*. Preprocessor directives have been expanded in .utx, and .ftx files using [ktransw][]. In order to properly compile dictionary files, `ninja` might have to be run twice to first create the karel include file, and then build the accompanying karel file. 
 
 
 ## Usage
@@ -97,7 +101,7 @@ that show how to use `rossum`.
   rossum C:\foo\bar\src -i
 ```
 
-> **_NOTE:_**  This option depends on the [kl-TPE](https://github.com/kobbled/kl-TPE) and [kl-registers](https://github.com/kobbled/kl-registers) packages from the [Ka-Boost](https://github.com/kobbled/Ka-Boost) libraries. If Ka-Boost is installed make sure to add theses libraries to the dependencies of the package you are build in with this option.
+> **_NOTE:_**  This option depends on the [kl-TPE](https://github.com/kobbled/kl-TPE),[kl-pose](https://github.com/kobbled/kl-pose), and [kl-registers](https://github.com/kobbled/kl-registers) packages from the [Ka-Boost](https://github.com/kobbled/Ka-Boost) libraries. If Ka-Boost is installed make sure to add theses libraries to the dependencies of the package you are build in with this option.
 
 ```json
 {
