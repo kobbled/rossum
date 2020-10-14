@@ -31,6 +31,7 @@ import datetime
 import os, shutil
 import sys
 import json
+import yaml
 import configparser
 import fnmatch
 from send2trash import send2trash
@@ -59,6 +60,8 @@ CSV_SUFFIX = 'csv'
 FORM_SUFFIX = 'ftx'
 DICT_SUFFIX = 'utx'
 COMPRESSED_SUFFIX = 'tx'
+
+FILE_MANIFEST = '.man_log'
 
 
 ENV_PKG_PATH='ROSSUM_PKG_PATH'
@@ -586,19 +589,16 @@ def main():
     ninja_interp = em.Interpreter(
             output=ninja_fl, globals=dict(globls),
             options={em.RAW_OPT : True, em.BUFFERED_OPT : True})
-    # write out ftp push template
-    ftp_fl = open(ftp_file_path, 'w')
-    ftp_interp = em.Interpreter(
-            output=ftp_fl, globals=dict(globls),
-            options={em.RAW_OPT : True, em.BUFFERED_OPT : True})
     # load and process the template
     logger.debug("Processing template")
     ninja_interp.file(open(template_path))
-    ftp_interp.file(open(template_ftp_path))
     # shutdown empy interpreters
     logger.debug("Shutting down empy")
     ninja_interp.shutdown()
-    ftp_interp.shutdown()
+
+    # write build files in manifest
+    man_list = [obj[2] for pkg in ws.pkgs for obj in pkg.objects]
+    write_manifest(FILE_MANIFEST, man_list, robini_info.ftp)
 
 
     # done
@@ -1237,6 +1237,26 @@ def parse_robotini(fpath):
         output=config['WinOLPC_Util']['Output'],
         ftp=config['WinOLPC_Util']['Ftp'],
         env=config['WinOLPC_Util']['Tpp-env'])
+
+def write_manifest(manifest, files, ipAddress):
+
+    file_list = dict()
+
+    #load in manifest if it exists
+    if os.path.exists(manifest):
+      with open(manifest) as man:
+        file_list = yaml.load(man, Loader=yaml.FullLoader)
+
+    #save ip address
+    file_list['ip'] = ipAddress
+
+    for fl in files:
+      if fl not in file_list.keys():
+        file_list[fl] = []
+
+    #save back to yaml file
+    with open(manifest, 'w') as man:
+      yaml.dump(file_list, man)
 
 
 #Class to represent a graph 
