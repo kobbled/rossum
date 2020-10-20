@@ -259,7 +259,7 @@ and create a wrapper program called **tp_func01**, you can define an interface i
 
 ```
 "tp-interfaces" : [
-    {"routine" : "func01", "tp_func01" : "func01"}
+    {"routine" : "func01", "program_name" : "tp_func01"}
   ]
 ```
 
