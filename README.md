@@ -247,6 +247,34 @@ Tpp-env=C:\Users\<user>\Documents\My Workcells\cell\tpp\vars.tpp
 }
 ```
 
+### tp-interfaces
+
+Teach pendant interfaces are a way of exposing karel routines, for usage in teach pendant (TP) programs. Inherently you are not allowed to access karel routines with the *CALL* function in TP programs. You are able to call karel programs within TP programs. Rossum provides a way to automatically create a karel program wrapper around a specified routine. For instance if you want to expose a routine definition:
+
+```
+ROUTINE func01(i : INTEGER; r : REAL; p : XYZWPR) : INTEGER
+```
+
+and create a wrapper program called **tp_func01**, you can define an interface in the package manifest:
+
+```
+"tp-interfaces" : [
+    {"routine" : "func01", "tp_func01" : "func01"}
+  ]
+```
+
+This will output a karel program to \<src\>/tp/ . If there is a return type the last arguement will be the register number to store the result in.
+
+If an input argument is a position type, the corresponding TPE arguement is the position register number where the input data is stored.
+
+**currently handled types**
+
+* INTEGER
+* REAL
+* STRING
+* XYZWPR
+* JOINTPOS
+
 ### user macros
 
 package/project wide pre-processor macros can be defined either from the command line or the package manifest. From the command line macros are invoked the same way they are in GPP (see [GPP documentation][GPP]), with **-D***name=val*, or **/D***name=val*. Macros can be included in the package manifest as shown in [example package.json](#packagejson-file-example).
