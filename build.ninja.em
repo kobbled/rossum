@@ -61,6 +61,7 @@ rule ktrans_pc
                --ktrans="@(ktrans.path)" $
                $lib_includes $
                /I"@(ktrans.support.path)" $
+               $macros $
                $in $
                /ver @(ktrans.support.version_string) $
                /config "@(ws.robot_ini.path)"
@@ -152,6 +153,7 @@ rule ftx_tx
 @(pkg.manifest.name)_dir = @(pkg.location)
 @(pkg.manifest.name)_deps = @(str.join(' ', [d.manifest.name for d in pkg.dependencies]))
 @(pkg.manifest.name)_include_flags = @(str.join(' ', ['/I"{0}"'.format(d) for d in pkg.include_dirs]))
+@(pkg.manifest.name)_macros = @(str.join(' ', ['/D{0}'.format(d) for d in pkg.macros]))
 
 @[for (src, obj, _) in pkg.objects]@
 build $build_dir\@(obj): @
@@ -165,6 +167,7 @@ build $build_dir\@(obj): @
 @[if '.utx' in src]@ utx_tx @[end if]@ @
 @[if '.ftx' in src]@ ftx_tx @[end if]@ @
 $@(pkg.manifest.name)_dir\@(src)
+  macros = $@(pkg.manifest.name)_macros
   lib_includes = $@(pkg.manifest.name)_include_flags
   description = @(pkg.manifest.name) :: @(src)
 

@@ -126,6 +126,13 @@ that show how to use `rossum`.
   rossum C:\foo\bar\src -b
 ```
 
+**build with user macro %define DEBUG**
+
+```
+  cd C:\foo\bar\build
+  rossum C:\foo\bar\src -DDEBUG=TRUE
+```
+
 **--help output**
 
 ```
@@ -183,6 +190,7 @@ optional arguments:
   -i  --build-interfaces   build tp interfaces for karel 
                         routines specified in package.json.
                         This is needed to use karel routines within a tp program
+  -D  /D                Define user macros from command line
   --clean               clean all files out of build directory
 ```
 
@@ -227,14 +235,21 @@ Tpp-env=C:\Users\<user>\Documents\My Workcells\cell\tpp\vars.tpp
     "registers",
     "TPElib",
     "ktransw-macros"
-  ]
-  ,
+  ],
   "tp-interfaces" : [
     {"routine" : "source__func01", "program_name" : "func01"},
     {"routine" : "source__func02", "program_name" : "func02"},
+  ],
+  "macros" : [
+    "DEBUG=TRUE",
+    "BUILD_LOG=FALSE"
   ]
 }
 ```
+
+### user macros
+
+package/project wide pre-processor macros can be defined either from the command line or the package manifest. From the command line macros are invoked the same way they are in GPP (see [GPP documentation][GPP]), with **-D***name=val*, or **/D***name=val*. Macros can be included in the package manifest as shown in [example package.json](#packagejson-file-example).
 
 ## Environment variables
 
@@ -305,3 +320,4 @@ author of `rossum` is not affiliated with Fanuc in any way.
 [releases]: https://github.com/kobbled/rossum/releases
 [rossum_example_ws]: https://github.com/kobbled/rossum_example_ws
 [Installing Python on Windows]: http://docs.python-guide.org/en/latest/starting/install/win/
+[GPP]: https://files.nothingisreal.com/software/gpp/gpp.html

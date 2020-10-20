@@ -133,7 +133,8 @@ RossumManifest = collections.namedtuple('RossumManifest',
     'source '
     'tests '
     'version '
-    'interfaces'
+    'interfaces '
+    'macros'
 )
 
 # a rossum package contains both raw, uninterpreted data (the manifest), as
@@ -145,7 +146,8 @@ RossumPackage = collections.namedtuple('RossumPackage',
     'location '     # absolute path to root dir of pkg
     'manifest '     # the rossum manifest of this pkg
     'objects '      # list of (src, obj) tuples
-    'tests'         # list of (src, obj) tuples for tests
+    'tests '         # list of (src, obj) tuples for tests
+    'macros' # user defines macros for global package context
 )
 
 # a rossum 'space' has:
@@ -258,6 +260,8 @@ def main():
         help='build all objects source space depends on.')
     parser.add_argument('-g', '--keepgpp', action='store_true', dest='keepgpp',
         help='build all objects source space depends on.')
+    parser.add_argument('-D', action='append', type=str, dest='user_macros',
+        metavar='PATH', default=[], help='Define user macros from command line')
     parser.add_argument('-tp', '--compiletp', action='store_true', dest='compiletp',
         help='compile .tpp files into .tp files. If false will just interpret to .ls.')
     parser.add_argument('-t', '--include-tests', action='store_true', dest='inc_tests',
@@ -271,6 +275,11 @@ def main():
         help="Main directory with packages to build")
     parser.add_argument('build_dir', type=str, nargs='?', metavar='BUILD',
         help="Directory for out-of-source builds (default: 'cwd')")
+
+    # support forward-slash arg notation for include dirs
+    for i in range(1, len(sys.argv)):
+        if sys.argv[i].startswith('/D'):
+            sys.argv[i] = sys.argv[i].replace('/D', '-D', 1)
     args = parser.parse_args()
 
 
@@ -490,6 +499,9 @@ def main():
     # all discovered pkgs get used for dependency and include path resolution,
     resolve_includes(all_pkgs)
 
+    #determine any user defined macros to pass to ktransw
+    resolve_macros(all_pkgs, args)
+
     # select to just build source or all related packages
     if args.buildall:
         build_pkgs = all_pkgs
@@ -653,7 +665,8 @@ def parse_manifest(fpath):
         tests=mfest['tests'] if 'tests' in mfest else [],
         includes=mfest['includes'] if 'includes' in mfest else [],
         depends=mfest['depends'] if 'depends' in mfest else [],
-        interfaces=mfest['tp-interfaces'] if 'tp-interfaces' in mfest else [])
+        interfaces=mfest['tp-interfaces'] if 'tp-interfaces' in mfest else [],
+        macros=mfest['macros'] if 'macros' in mfest else [])
 
 
 def find_pkgs(dirs):
@@ -675,7 +688,8 @@ def find_pkgs(dirs):
                     location=os.path.dirname(manifest_file_path),
                     manifest=manifest,
                     objects=[],
-                    tests=[])
+                    tests=[],
+                    macros=[])
             pkgs.append(pkg)
         except Exception as e:
             mfest_loc = os.path.join(os.path.split(
@@ -834,6 +848,13 @@ def resolve_includes_for_pkg(pkg, visited):
         for dep_pkg in pkg.dependencies:
             inc_dirs.extend(resolve_includes_for_pkg(dep_pkg, visited))
     return inc_dirs
+
+def resolve_macros(pkgs, args):
+    for pkg in pkgs:
+      if args.user_macros:
+        pkg.macros.extend(args.user_macros)
+      if len(pkg.manifest.macros):
+        pkg.macros.extend(pkg.manifest.macros)
 
 
 def get_interfaces(pkgs):
