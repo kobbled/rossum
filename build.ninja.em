@@ -155,7 +155,7 @@ rule ftx_tx
 @(pkg.manifest.name)_include_flags = @(str.join(' ', ['/I"{0}"'.format(d) for d in pkg.include_dirs]))
 @(pkg.manifest.name)_macros = @(str.join(' ', ['/D{0}'.format(d) for d in pkg.macros]))
 
-@[for (src, obj, _) in pkg.objects]@
+@[for (src, obj, _, _) in pkg.objects]@
 build $build_dir\@(obj): @
 @[if '.kl' in src]@ ktrans_pc @[end if]@ @
 @[if '.ls' in src and compiletp]@ maketp_tp @[end if]@ @

@@ -48,6 +48,8 @@ ROSSUM_VERSION='0.1.7'
 _OS_EX_USAGE=64
 _OS_EX_DATAERR=65
 
+DATA_TYPES = ('karel', 'src', 'test', 'tp', 'test_tp', 
+              'forms', 'test_forms', 'data', 'test_data')
 KL_SUFFIX = 'kl'
 PCODE_SUFFIX = 'pc'
 TP_SUFFIX = 'ls'
@@ -389,20 +391,20 @@ def main():
     path_lst = find_tools(search_locs, tools, args)
     # put list into dictionary for file type build rule
     tool_paths = {
-        'ktrans' : {'from_suffix' : '0', 'to_suffix' : '0', 'path' : path_lst[0]},
-        'ktransw' : {'from_suffix' : KL_SUFFIX, 'interp_suffix' : PCODE_SUFFIX, 'comp_suffix' : PCODE_SUFFIX, 'path' : (args.ktransw or path_lst[1])},
-        'yaml' : {'from_suffix' : YAML_SUFFIX, 'interp_suffix' : XML_SUFFIX,  'comp_suffix' : XML_SUFFIX, 'path' : path_lst[4]},
-        'csv' : {'from_suffix' : CSV_SUFFIX, 'interp_suffix' : CSV_SUFFIX,  'comp_suffix' : CSV_SUFFIX, 'path' : 'C:\\Windows\\SysWOW64\\xcopy.exe'},
-        'kcdict' : {'from_suffix' : DICT_SUFFIX, 'interp_suffix' : COMPRESSED_SUFFIX, 'comp_suffix' : COMPRESSED_SUFFIX, 'path' : path_lst[5]},
-        'kcform' : {'from_suffix' : FORM_SUFFIX, 'interp_suffix' : COMPRESSED_SUFFIX, 'comp_suffix' : COMPRESSED_SUFFIX, 'path' : path_lst[5]}
+        'ktrans' : {'from_suffix' : '0', 'to_suffix' : '0', 'path' : path_lst[0], 'type' : 'karel'},
+        'ktransw' : {'from_suffix' : KL_SUFFIX, 'interp_suffix' : PCODE_SUFFIX, 'comp_suffix' : PCODE_SUFFIX, 'path' : (args.ktransw or path_lst[1]), 'type' : 'karel'},
+        'yaml' : {'from_suffix' : YAML_SUFFIX, 'interp_suffix' : XML_SUFFIX,  'comp_suffix' : XML_SUFFIX, 'path' : path_lst[4], 'type' : 'data'},
+        'csv' : {'from_suffix' : CSV_SUFFIX, 'interp_suffix' : CSV_SUFFIX,  'comp_suffix' : CSV_SUFFIX, 'path' : 'C:\\Windows\\SysWOW64\\xcopy.exe', 'type' : 'data'},
+        'kcdict' : {'from_suffix' : DICT_SUFFIX, 'interp_suffix' : COMPRESSED_SUFFIX, 'comp_suffix' : COMPRESSED_SUFFIX, 'path' : path_lst[5], 'type' : 'forms'},
+        'kcform' : {'from_suffix' : FORM_SUFFIX, 'interp_suffix' : COMPRESSED_SUFFIX, 'comp_suffix' : COMPRESSED_SUFFIX, 'path' : path_lst[5], 'type' : 'forms'}
     }
     #for tpp decide if just interpreting, or compiling to tp
     if args.compiletp:
-      tool_paths['maketp'] = {'from_suffix' : TP_SUFFIX, 'interp_suffix' : TPCODE_SUFFIX, 'comp_suffix' : TPCODE_SUFFIX, 'path' : path_lst[2]}
-      tool_paths['tpp'] = {'from_suffix' : TPP_SUFFIX, 'interp_suffix' : TPP_INTERP_SUFFIX, 'comp_suffix' : TPCODE_SUFFIX, 'path' : path_lst[3], 'compile' : path_lst[2]}
+      tool_paths['maketp'] = {'from_suffix' : TP_SUFFIX, 'interp_suffix' : TPCODE_SUFFIX, 'comp_suffix' : TPCODE_SUFFIX, 'path' : path_lst[2], 'type' : 'tp'}
+      tool_paths['tpp'] = {'from_suffix' : TPP_SUFFIX, 'interp_suffix' : TPP_INTERP_SUFFIX, 'comp_suffix' : TPCODE_SUFFIX, 'path' : path_lst[3], 'compile' : path_lst[2], 'type' : 'tp'}
     else:
-      tool_paths['maketp'] = {'from_suffix' : TP_SUFFIX, 'interp_suffix' : TP_SUFFIX, 'comp_suffix' : TP_SUFFIX, 'path' : 'C:\\Windows\\SysWOW64\\xcopy.exe'}
-      tool_paths['tpp'] = {'from_suffix' : TPP_SUFFIX, 'interp_suffix' : TPP_INTERP_SUFFIX, 'comp_suffix' : TPP_INTERP_SUFFIX, 'path' : path_lst[3]}
+      tool_paths['maketp'] = {'from_suffix' : TP_SUFFIX, 'interp_suffix' : TP_SUFFIX, 'comp_suffix' : TP_SUFFIX, 'path' : 'C:\\Windows\\SysWOW64\\xcopy.exe', 'type' : 'tp'}
+      tool_paths['tpp'] = {'from_suffix' : TPP_SUFFIX, 'interp_suffix' : TPP_INTERP_SUFFIX, 'comp_suffix' : TPP_INTERP_SUFFIX, 'path' : path_lst[3], 'type' : 'tp'}
 
     # try to find support directory for selected core software version
     logger.info("Setting default system core version to: {}".format(args.core_version))
@@ -609,7 +611,7 @@ def main():
     ninja_interp.shutdown()
 
     # write build files in manifest
-    man_list = [obj[2] for pkg in ws.pkgs for obj in pkg.objects]
+    man_list = [(obj[2], obj[3]) for pkg in ws.pkgs for obj in pkg.objects]
     write_manifest(FILE_MANIFEST, man_list, robini_info.ftp)
 
 
@@ -941,8 +943,12 @@ def create_interfaces(interfaces):
               # key = pr_variable : val = group_num
               # if no group num is specified mark value as 'None'
               pr_dict['pr_num{0}'.format(i)] = {'index' : i, 'group' : 'None', 'type' : args[1].lower(), 'map_var' : args[0] }
-            
-            program += '\t{0} : {1}\n'.format(args[0], args[1])
+
+            # var definition of strings must specify a size. 
+            var_typ = args[1]
+            if var_typ == 'STRING':
+              var_typ = 'STRING[32]'
+            program += '\t{0} : {1}\n'.format(args[0], var_typ)
             i += 1
         
         #flag if groups are specified
@@ -1076,8 +1082,12 @@ def gen_obj_mappings(pkgs, mappings, args, dep_graph):
                 if '.' + v['from_suffix'] in src:
                     obj = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['interp_suffix'])
                     build = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['comp_suffix'])
+                    if v['type'] == 'karel':
+                      typ = 'src'
+                    else:
+                      typ = v['type']
             logger.debug("    adding: {} -> {}".format(src, obj))
-            pkg.objects.append((src, obj, build))
+            pkg.objects.append((src, obj, build, typ))
 
         if (args.inc_tests) and any(pkg.manifest.name in x.name for x in dep_graph.root):
           for src in pkg.manifest.tests:
@@ -1086,8 +1096,12 @@ def gen_obj_mappings(pkgs, mappings, args, dep_graph):
                   if '.' + v['from_suffix'] in src:
                       obj = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['interp_suffix'])
                       build = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['comp_suffix'])
+                      if v['type'] == 'karel':
+                        typ = 'test'
+                      else:
+                        typ = 'test_' + v['type']
               logger.debug("    adding: {} -> {}".format(src, obj))
-              pkg.objects.append((src, obj, build))
+              pkg.objects.append((src, obj, build, typ))
 
 
 def find_fr_install_dir(search_locs, is64bit=False):
@@ -1271,9 +1285,14 @@ def write_manifest(manifest, files, ipAddress):
     #save ip address
     file_list['ip'] = ipAddress
 
+    #save file. null list in value is for ktransw objects
+    #and templates
     for fl in files:
-      if fl not in file_list.keys():
-        file_list[fl] = []
+      if fl[1] not in file_list.keys():
+        file_list[fl[1]] = {}
+      sub_dict = file_list[fl[1]]
+      if fl[0] not in sub_dict.keys():
+        file_list[fl[1]][fl[0]] = []
 
     #save back to yaml file
     with open(manifest, 'w') as man:
