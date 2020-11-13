@@ -25,6 +25,9 @@ FILE_MANIFEST = '.man_log'
 FTP_FILE_NAME='ftp.txt'
 FTP_FILE_TEMPLATE_NAME='ftp.txt.em'
 
+DATA_TYPES = ('karel', 'src', 'test', 'tp', 'test_tp', 
+              'forms', 'test_forms', 'data', 'test_data')
+
 karelext = ['.pc']
 tpext = ['.ls', '.tp']
 formsext = ['.tx']
@@ -33,11 +36,11 @@ dataext = ['.xml', '.csv']
 def main():
   #initialize sorted manifest
   ftpManifest = {
-    'karel' : [],
-    'karelvr' : [],
-    'tp' : [],
-    'forms' : [],
-    'data' : []
+    'karel' : set(),
+    'karelvr' : set(),
+    'tp' : set(),
+    'forms' : set(),
+    'data' : set()
   }
   #get build directory
   build_dir   = os.path.abspath(os.getcwd())
@@ -51,15 +54,18 @@ def main():
     file_list = yaml.load(man, Loader=yaml.FullLoader)
 
   #sort files from build manifest into containers for ftp template
-  for parent, children in file_list.items():
-    ext = os.path.splitext(parent)[-1]
-    sortfile(parent, ftpManifest)
-    if ext in formsext:
-      for child in children:
-        ftpManifest['forms'].append(child)
-    else:
-      for child in children:
-        sortfile(child, ftpManifest)
+  for key in file_list.keys():
+    if (key in DATA_TYPES) and isinstance(file_list[key], dict):
+      sub_dict = file_list[key]
+      for parent, children in sub_dict.items():
+        ext = os.path.splitext(parent)[-1]
+        sortfile(key, parent, ftpManifest)
+        if ext in formsext:
+          for child in children:
+            ftpManifest['forms'].add(child)
+        else:
+          for child in children:
+            sortchild(child, ftpManifest)
   
   # write out ftp push template
   ftp_fl = open(ftp_file_path, 'w')
@@ -74,20 +80,31 @@ def main():
   ftp_interp.shutdown()
 
 
-def sortfile(fl, manifest):
+def sortfile(typ, fl, manifest):
+  if typ in ('karel', 'src', 'test'):
+    manifest['karel'].add(fl)
+    #add variable file
+    manifest['karelvr'].add(os.path.splitext(fl)[0] + '.vr')
+  if typ in ('tp', 'test_tp'):
+    manifest['tp'].add(fl)
+  if typ in ('forms', 'test_forms'):
+    manifest['forms'].add(fl)
+  if typ in ('data', 'test_data'):
+    manifest['data'].add(fl)
+
+def sortchild(fl, manifest):
   ext = os.path.splitext(fl)[-1]
 
   if ext in karelext:
-    manifest['karel'].append(fl)
+    manifest['karel'].add(fl)
     #add variable file
-    manifest['karelvr'].append(os.path.splitext(fl)[0] + '.vr')
+    manifest['karelvr'].add(os.path.splitext(fl)[0] + '.vr')
   if ext in tpext:
-    manifest['tp'].append(fl)
+    manifest['tp'].add(fl)
   if ext in formsext:
-    manifest['forms'].append(fl)
+    manifest['forms'].add(fl)
   if ext in dataext:
-    manifest['data'].append(fl)
-
+    manifest['data'].add(fl)
 
 if __name__ == '__main__':
   main()
