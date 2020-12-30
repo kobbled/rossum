@@ -241,6 +241,8 @@ def main():
         help='Do everything except writing to build file')
     parser.add_argument('--ktransw', type=str, dest='ktransw', metavar='PATH',
         help="Location of ktransw (default: assume it's on the Windows PATH)")
+    parser.add_argument('-E', '--preprocess-only', action='store_true', dest='translate_only',
+        help="Preprocess only; do not translate")
     parser.add_argument('-n', '--no-env', action='store_true', dest='no_env',
         help='Do not search the {0}, even if it is set'.format(ENV_PKG_PATH))
     parser.add_argument('-p', '--pkg-dir', action='append', type=str,
@@ -389,10 +391,15 @@ def main():
     search_locs.extend([p for p in os.environ['Path'].split(os.pathsep) if len(p) > 0])
     #find build tools
     path_lst = find_tools(search_locs, tools, args)
+    # if only precompiling
+    if args.translate_only:
+        kl_comp_ext = KL_SUFFIX
+    else:
+        kl_comp_ext = PCODE_SUFFIX
     # put list into dictionary for file type build rule
     tool_paths = {
         'ktrans' : {'from_suffix' : '0', 'to_suffix' : '0', 'path' : path_lst[0], 'type' : 'karel'},
-        'ktransw' : {'from_suffix' : KL_SUFFIX, 'interp_suffix' : PCODE_SUFFIX, 'comp_suffix' : PCODE_SUFFIX, 'path' : (args.ktransw or path_lst[1]), 'type' : 'karel'},
+        'ktransw' : {'from_suffix' : KL_SUFFIX, 'interp_suffix' : kl_comp_ext, 'comp_suffix' : kl_comp_ext, 'path' : (args.ktransw or path_lst[1]), 'type' : 'karel'},
         'yaml' : {'from_suffix' : YAML_SUFFIX, 'interp_suffix' : XML_SUFFIX,  'comp_suffix' : XML_SUFFIX, 'path' : path_lst[4], 'type' : 'data'},
         'csv' : {'from_suffix' : CSV_SUFFIX, 'interp_suffix' : CSV_SUFFIX,  'comp_suffix' : CSV_SUFFIX, 'path' : 'C:\\Windows\\SysWOW64\\xcopy.exe', 'type' : 'data'},
         'kcdict' : {'from_suffix' : DICT_SUFFIX, 'interp_suffix' : COMPRESSED_SUFFIX, 'comp_suffix' : COMPRESSED_SUFFIX, 'path' : path_lst[5], 'type' : 'forms'},
@@ -580,6 +587,12 @@ def main():
     if args.keepgpp:
         keep_buildd = '-k'
 
+    #if --preprocess-only run through GPP and copy resulting
+    #file into build folder.
+    copy_karel = ''
+    if args.translate_only:
+        copy_karel = '-E'
+
     # don't overwrite existing files, unless instructed to do so
     if (not args.overwrite) and os.path.exists(build_file_path):
         logger.fatal("Existing {0} detected and '--overwrite' not specified. "
@@ -596,6 +609,7 @@ def main():
         'tstamp'         : datetime.datetime.now().isoformat(),
         'tools'          : tool_paths,
         'keepgpp'        : keep_buildd,
+        'preprocess_karel' : copy_karel,
         'compiletp'      : args.compiletp
     }
     # write out ninja template

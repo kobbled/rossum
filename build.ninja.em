@@ -55,6 +55,18 @@ build_dir = @(ws.build.path)
 # this rule always places the Karel support directory corresponding to the
 # runtime version on the include path, as that is a globally needed path.
 rule ktrans_pc
+@[if preprocess_karel]@
+  command = "@(ktransw.path)" $
+               -q @(keepgpp)@(preprocess_karel) $
+               $lib_includes $
+               /I"@(ktrans.support.path)" $
+               $macros $
+               $in $
+               /ver @(ktrans.support.version_string) $
+               /config "@(ws.robot_ini.path)"
+  depfile = $out.d
+  deps = gcc
+@[else]@
   command = "@(ktransw.path)" $
                -q @(keepgpp) $
                -MM -MP -MT $out -MF $out.d $
@@ -67,6 +79,7 @@ rule ktrans_pc
                /config "@(ws.robot_ini.path)"
   depfile = $out.d
   deps = gcc
+@[end if]@
 
 @[if compiletp]@
 # .ls -> .tp
