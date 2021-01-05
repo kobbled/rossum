@@ -95,7 +95,7 @@ rule maketp_tp
 # Run ls files through
 rule maketp_ls
   command = "@(tools['maketp']['path'])" /y /q $
-               "$in" $
+               $in $
                "$build_dir" $
 @[end if]@
 
@@ -132,7 +132,7 @@ rule yaml_xml
 #
 rule csv_csv
   command = "@(tools['csv']['path'])" /y /q $
-               "$in" $
+               $in $
                "$build_dir" $
 
 # .utx -> .tx, .vr
@@ -141,7 +141,7 @@ rule utx_tx
   command = "@(tools['kcdict']['path'])" $
                @(keepgpp) $
                $lib_includes $
-               "$in" $
+               $in $
                "$build_dir" $
                /config "@(ws.robot_ini.path)"
 
@@ -151,7 +151,7 @@ rule ftx_tx
   command = "@(tools['kcform']['path'])" $
                @(keepgpp) $
                $lib_includes $
-               "$in" $
+               $in $
                "$build_dir" $
                /config "@(ws.robot_ini.path)"
 
