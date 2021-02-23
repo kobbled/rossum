@@ -134,8 +134,10 @@ RossumManifest = collections.namedtuple('RossumManifest',
     'name '
     'source '
     'tests '
+    'test_depends '
     'version '
     'interfaces '
+    'interfaces_depends '
     'macros'
 )
 
@@ -499,7 +501,7 @@ def main():
 
     # build out dependency trees
     # for all packages in src_space
-    dependency_graph = create_dependency_graph(src_space_pkgs, all_pkgs)
+    dependency_graph = create_dependency_graph(src_space_pkgs, all_pkgs, args)
     #log dependency trees to logger
     log_dep_tree(dependency_graph)
     #filter out additional packages that are not dependencies
@@ -681,7 +683,9 @@ def parse_manifest(fpath):
         tests=mfest['tests'] if 'tests' in mfest else [],
         includes=mfest['includes'] if 'includes' in mfest else [],
         depends=mfest['depends'] if 'depends' in mfest else [],
+        test_depends=mfest['tests-depends'] if 'tests-depends' in mfest else [],
         interfaces=mfest['tp-interfaces'] if 'tp-interfaces' in mfest else [],
+        interfaces_depends=mfest['interface-depends'] if 'interface-depends' in mfest else [],
         macros=mfest['macros'] if 'macros' in mfest else [])
 
 
@@ -736,7 +740,7 @@ def find_in_list(l, pred):
     return None
 
 
-def create_dependency_graph(source_pkgs, all_pkgs):
+def create_dependency_graph(source_pkgs, all_pkgs, args):
     """
     Creates dependency graph for build
     Maps dependency pkg names to RossumPackage instances
@@ -753,13 +757,18 @@ def create_dependency_graph(source_pkgs, all_pkgs):
         # add to final_pkgs object
         # set package as a root on dependency tree
         dep_graph.setRoot(pkg.manifest.name, pkg.manifest.version)
+        deps = pkg.manifest.depends
+        if (args.inc_tests):
+          deps.extend(pkg.manifest.test_depends)
+        if(args.build_interface):
+          deps.extend(pkg.manifest.interfaces_depends)
         # Search through dependencies and add to dep graph and to
         # dependencies in RossumPackage collection
-        add_dependency(pkg, visited, dep_graph, all_pkgs)
+        add_dependency(pkg, deps, visited, args, dep_graph, all_pkgs)
     
     return dep_graph
 
-def add_dependency(src_package, visited, graph, pkgs):
+def add_dependency(src_package, dep_list, visited, args, graph, pkgs):
     """
     """
     if src_package.manifest.name not in visited:
@@ -776,8 +785,13 @@ def add_dependency(src_package, visited, graph, pkgs):
             # after dependency has been added track to visited set to avoid circular dependencies
             visited.add(src_package.manifest.name)
             #if depend package has dependencies search for those as well
-            if len(dep_pkg.manifest.depends) > 0:
-                add_dependency(dep_pkg, visited, graph, pkgs)
+            deps = dep_pkg.manifest.depends
+            if (args.inc_tests):
+              deps.extend(dep_pkg.manifest.test_depends)
+            if(args.build_interface):
+              deps.extend(dep_pkg.manifest.interfaces_depends)
+            if len(deps) > 0:
+                add_dependency(dep_pkg, deps, visited, args, graph, pkgs)
 
 def log_dep_tree(graph):
     """write depedency trees from source packages
