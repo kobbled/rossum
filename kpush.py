@@ -19,6 +19,7 @@ import os
 import em
 import yaml
 import collections
+from ordered_set import OrderedSet
 
 FILE_MANIFEST = '.man_log'
 
@@ -36,11 +37,11 @@ dataext = ['.xml', '.csv']
 def main():
   #initialize sorted manifest
   ftpManifest = {
-    'karel' : set(),
-    'karelvr' : set(),
-    'tp' : set(),
-    'forms' : set(),
-    'data' : set()
+    'karel' : OrderedSet(),
+    'karelvr' : OrderedSet(),
+    'tp' : OrderedSet(),
+    'forms' : OrderedSet(),
+    'data' : OrderedSet()
   }
   #get build directory
   build_dir   = os.path.abspath(os.getcwd())
@@ -59,13 +60,14 @@ def main():
       sub_dict = file_list[key]
       for parent, children in sub_dict.items():
         ext = os.path.splitext(parent)[-1]
-        sortfile(key, parent, ftpManifest)
         if ext in formsext:
           for child in children:
             ftpManifest['forms'].add(child)
         else:
           for child in children:
             sortchild(child, ftpManifest)
+        #sort parent last for dependencies
+        sortfile(key, parent, ftpManifest)
   
   # write out ftp push template
   ftp_fl = open(ftp_file_path, 'w')
