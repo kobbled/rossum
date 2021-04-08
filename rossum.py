@@ -133,6 +133,7 @@ RossumManifest = collections.namedtuple('RossumManifest',
     'includes '
     'name '
     'source '
+    'forms '
     'tests '
     'test_depends '
     'version '
@@ -275,6 +276,8 @@ def main():
     parser.add_argument('-i', '--build-interfaces', action='store_true', dest='build_interface',
         help='build tp interfaces for karel routines specified in package.json.'
         'This is needed to use karel routines within a tp program')
+    parser.add_argument('-f', '--build-forms', action='store_true', dest='build_forms',
+        help='include forms for building')
     parser.add_argument('--clean', action='store_true', dest='rossum_clean',
         help='clean all files out of build directory')
     parser.add_argument('src_dir', type=str, nargs='?', metavar='SRC',
@@ -680,6 +683,7 @@ def parse_manifest(fpath):
         description=mfest['description'],
         version=mfest['version'],
         source=mfest['source'] if 'source' in mfest else [],
+        forms=mfest['forms'] if 'forms' in mfest else [],
         tests=mfest['tests'] if 'tests' in mfest else [],
         includes=mfest['includes'] if 'includes' in mfest else [],
         depends=mfest['depends'] if 'depends' in mfest else [],
@@ -1103,6 +1107,10 @@ def gen_obj_mappings(pkgs, mappings, args, dep_graph):
 
     for pkg in pkgs:
         logger.debug("  {}".format(pkg.manifest.name))
+
+        # include forms in source
+        if args.build_forms:
+          pkg.manifest.source.extend(pkg.manifest.forms)
 
         for src in pkg.manifest.source:
             src = src.replace('/', '\\')
