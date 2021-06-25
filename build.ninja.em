@@ -99,6 +99,7 @@ rule maketp_ls
                "$build_dir" $
 @[end if]@
 
+@[if hastpp]@
 @[if compiletp]@
 # .tpp -> .tp
 #
@@ -117,6 +118,7 @@ rule tpp_ls
   command = "@(tools['tpp']['path'])" $
                $in $
                -o $out @[if len(ws.robot_ini.env) > 0]@ -e "@(ws.robot_ini.env)"@[end if]@
+@[end if]@
 @[end if]@
 
 

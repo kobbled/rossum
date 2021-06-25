@@ -618,7 +618,8 @@ def main():
         'tools'          : tool_paths,
         'keepgpp'        : keep_buildd,
         'preprocess_karel' : copy_karel,
-        'compiletp'      : args.compiletp
+        'compiletp'      : args.compiletp,
+        'hastpp'         : args.hastpp,
     }
     # write out ninja template
     ninja_fl = open(build_file_path, 'w')
@@ -1109,6 +1110,9 @@ def gen_obj_mappings(pkgs, mappings, args, dep_graph):
     pkg_names = [p.manifest.name for p in pkgs]
     logger.debug("Generating src to obj mappings for: {}".format(', '.join(pkg_names)))
 
+    # start with assumption no tpp files are in package
+    args.hastpp = False
+
     for pkg in pkgs:
         logger.debug("  {}".format(pkg.manifest.name))
 
@@ -1130,6 +1134,9 @@ def gen_obj_mappings(pkgs, mappings, args, dep_graph):
                       typ = 'src'
                     else:
                       typ = v['type']
+                    # check if tpp file is in package
+                    if k == 'tpp':
+                      args.hastpp = True
             logger.debug("    adding: {} -> {}".format(src, obj))
             pkg.objects.append((src, obj, build, typ))
 
@@ -1144,6 +1151,9 @@ def gen_obj_mappings(pkgs, mappings, args, dep_graph):
                         typ = 'test'
                       else:
                         typ = 'test_' + v['type']
+                      # check if tpp file is in package
+                      if k == 'tpp':
+                        args.hastpp = True
               logger.debug("    adding: {} -> {}".format(src, obj))
               pkg.objects.append((src, obj, build, typ))
 
