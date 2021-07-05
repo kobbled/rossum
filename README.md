@@ -43,6 +43,17 @@ to specify the path to `ktransw.cmd` as a command line argument to `rossum`.
 Note that this would have to be repeated each time a new build directory is
 created.
 
+| :warning: WARNING          |
+|:---------------------------|
+
+On windows machines the `python` alias can be overwritten by the py launcher where python is started in the terminal with `py -3`. The batch files are written with the `python` key. To create the alias type this into powershell:
+
+```powershell
+Set-Alias -Name python -Value "path\to\Python\Python39\python.exe"
+```
+
+replacing the value with the full path to the python executable in your PATH environment variables.
+
 ## Examples
 
 Please see [rossum_example_ws][] for an example workspace with some packages
