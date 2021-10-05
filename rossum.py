@@ -135,6 +135,7 @@ RossumManifest = collections.namedtuple('RossumManifest',
     'version '
     'interfaces '
     'interfaces_depends '
+    'interface_files '
     'macros'
 )
 
@@ -688,6 +689,7 @@ def parse_manifest(fpath):
         test_depends=mfest['tests-depends'] if 'tests-depends' in mfest else [],
         interfaces=mfest['tp-interfaces'] if 'tp-interfaces' in mfest else [],
         interfaces_depends=mfest['interface-depends'] if 'interface-depends' in mfest else [],
+        interface_files=['tp/{}.kl'.format(i['program_name']) for i in mfest['tp-interfaces']] if 'tp-interfaces' in mfest else [],
         macros=mfest['macros'] if 'macros' in mfest else [])
 
 
@@ -945,8 +947,6 @@ def get_interfaces(pkgs):
                                     arguments= arguments,
                                     return_type= ret_type
                                 ))
-                                #add to source files
-                                pkg.manifest.source.append('tp/{}.kl'.format(interface['program_name']))
                                 # outer loop break control
                                 found_routine = True
                                 break
@@ -1159,6 +1159,19 @@ def gen_obj_mappings(pkgs, mappings, args, dep_graph):
             logger.debug("    adding: {} -> {}".format(src, obj))
             pkg.objects.append((src, obj, build, typ))
 
+        # add interfaces to mappings
+        if (args.build_interface) and any(pkg.manifest.name in x.name for x in dep_graph.root):
+          for src in pkg.manifest.interface_files:
+            src = src.replace('/', '\\')
+            for (k, v) in mappings.items():
+                if '.' + v['from_suffix'] in src:
+                    obj = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['interp_suffix'])
+                    build = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['comp_suffix'])
+                    typ = 'interface'
+            logger.debug("    adding: {} -> {}".format(src, obj))
+            pkg.objects.append((src, obj, build, typ))
+
+        # add tests to mappings
         if (args.inc_tests) and any(pkg.manifest.name in x.name for x in dep_graph.root):
           for src in pkg.manifest.tests:
               src = src.replace('/', '\\')

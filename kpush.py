@@ -27,7 +27,7 @@ FTP_FILE_NAME='ftp.txt'
 FTP_FILE_TEMPLATE_NAME='ftp.txt.em'
 
 DATA_TYPES = ('karel', 'src', 'test', 'tp', 'test_tp', 
-              'forms', 'test_forms', 'data', 'test_data')
+              'forms', 'test_forms', 'data', 'test_data', 'interface')
 
 karelext = ['.pc']
 tpext = ['.ls', '.tp']
@@ -35,13 +35,25 @@ formsext = ['.tx']
 dataext = ['.xml', '.csv']
 
 def main():
+  import argparse
+
+  description=("FTP wrapper tool for putting and getting files from "
+        "the controller.")
+  parser = argparse.ArgumentParser(prog='kpush', description=description
+                    , formatter_class=argparse.RawDescriptionHelpFormatter)
+  
+  parser.add_argument('-i', '--exclude-interfaces', action='store_true', dest='exclude_interface',
+        help='Be verbose')
+  args = parser.parse_args()
+
   #initialize sorted manifest
   ftpManifest = {
     'karel' : OrderedSet(),
     'karelvr' : OrderedSet(),
     'tp' : OrderedSet(),
     'forms' : OrderedSet(),
-    'data' : OrderedSet()
+    'data' : OrderedSet(),
+    'interface' : OrderedSet(),
   }
   #get build directory
   build_dir   = os.path.abspath(os.getcwd())
@@ -67,7 +79,7 @@ def main():
           for child in children:
             sortchild(child, ftpManifest)
         #sort parent last for dependencies
-        sortfile(key, parent, ftpManifest)
+        sortfile(key, parent, ftpManifest, args)
   
   # write out ftp push template
   ftp_fl = open(ftp_file_path, 'w')
@@ -82,7 +94,7 @@ def main():
   ftp_interp.shutdown()
 
 
-def sortfile(typ, fl, manifest):
+def sortfile(typ, fl, manifest, args):
   if typ in ('karel', 'src', 'test'):
     manifest['karel'].add(fl)
     #add variable file
@@ -93,6 +105,8 @@ def sortfile(typ, fl, manifest):
     manifest['forms'].add(fl)
   if typ in ('data', 'test_data'):
     manifest['data'].add(fl)
+  if (not args.exclude_interface) and (typ in ('interface')):
+    manifest['interface'].add(fl)
 
 def sortchild(fl, manifest):
   ext = os.path.splitext(fl)[-1]

@@ -41,6 +41,21 @@ mput @
 @[end for]@
 @[end if]@
 
+@[if len(files['interface']) > 0]@
+@# del interfaces
+mdel @
+@[for fl in files['interface']]@
+"@(fl)" @
+@[end for]@
+
+@# add interfaces
+mput @
+@[for fl in files['interface']]@
+"@(fl)" @
+@[end for]@
+@[end if]@
+
+
 @[if len(files['forms']) > 0]@
 @# change directories for forms
 cd mf2:\
