@@ -48,8 +48,6 @@ ROSSUM_VERSION='0.1.7'
 _OS_EX_USAGE=64
 _OS_EX_DATAERR=65
 
-DATA_TYPES = ('karel', 'src', 'test', 'tp', 'test_tp', 
-              'forms', 'test_forms', 'data', 'test_data')
 KL_SUFFIX = 'kl'
 PCODE_SUFFIX = 'pc'
 TP_SUFFIX = 'ls'
@@ -72,9 +70,6 @@ ENV_SERVER_IP='ROSSUM_SERVER_IP'
 
 BUILD_FILE_NAME='build.ninja'
 BUILD_FILE_TEMPLATE_NAME='build.ninja.em'
-
-FTP_FILE_NAME='ftp.txt'
-FTP_FILE_TEMPLATE_NAME='ftp.txt.em'
 
 FANUC_SEARCH_PATH = [
     'C:\\Program Files\\Fanuc',
@@ -450,8 +445,6 @@ def main():
     template_dir  = os.path.dirname(os.path.realpath(__file__))
     template_path = os.path.join(template_dir, BUILD_FILE_TEMPLATE_NAME) # for ninja file
     build_file_path = os.path.join(build_dir, BUILD_FILE_NAME)
-    template_ftp_path = os.path.join(template_dir, FTP_FILE_TEMPLATE_NAME) # for ftp
-    ftp_file_path = os.path.join(build_dir, FTP_FILE_NAME)
 
     # check
     if not os.path.isfile(template_path):
@@ -647,6 +640,8 @@ def main():
 
 
 def find_files_recur(top_dir, pattern):
+    """
+    """
     matches = []
     for root, dirnames, filenames in os.walk(top_dir, topdown=True):
         # if we find an ignore file, don't go down into that subtree
@@ -662,18 +657,16 @@ def find_files_recur(top_dir, pattern):
     return matches
 
 
-def is_rossum_pkg(mfest):
-    return 'manver' in mfest
-
-
 def parse_manifest(fpath):
+    """Convert a package.json file into a RossumManifest struct
+    """
     with open(fpath, 'r') as f:
         mfest = json.load(f)
 
     logger.debug("Loaded {0} from {1}".format(os.path.basename(fpath), os.path.dirname(fpath)))
 
     # make sure this is not a file that happens to be called 'package.json'
-    if not is_rossum_pkg(mfest):
+    if not 'manver' in mfest:
         logger.debug("Not a rossum pkg: {0}".format(fpath))
         raise InvalidManifestException("Not a rossum pkg")
 
@@ -699,6 +692,9 @@ def parse_manifest(fpath):
 
 
 def find_pkgs(dirs):
+    """find packages in package path directories, and parse package.json files 
+    into RossumPackage structs.
+    """
     manifest_file_paths = []
     for d in dirs:
         logger.debug("Searching in {0}".format(d))
@@ -743,6 +739,8 @@ def remove_duplicates(pkgs):
 
 
 def find_in_list(l, pred):
+    """lamba function for finding item in a list
+    """
     for i in l:
         if pred(i):
             return i
@@ -778,7 +776,7 @@ def create_dependency_graph(source_pkgs, all_pkgs, args):
     return dep_graph
 
 def add_dependency(src_package, dep_list, visited, args, graph, pkgs):
-    """
+    """build out dependency tree, traversing dependencies in the parent node.
     """
     if src_package.manifest.name not in visited:
         logger.debug("  {}:".format(src_package.manifest.name))
@@ -889,6 +887,8 @@ def resolve_includes_for_pkg(pkg, visited):
     return inc_dirs
 
 def resolve_macros(pkgs, args):
+    '''determine any user defined macros to pass to ktransw
+    '''
     for pkg in pkgs:
       if args.user_macros:
         pkg.macros.extend(args.user_macros)
@@ -897,8 +897,8 @@ def resolve_macros(pkgs, args):
 
 
 def get_interfaces(pkgs):
-    """Create interface karel programs for routines for use in
-       TP programs.
+    """Get all of the TP interfaces specified in package.json, and store them
+    as TPInterfaces collections.
     """
     programs = []
     for pkg in pkgs:
@@ -954,6 +954,25 @@ def get_interfaces(pkgs):
     return programs
 
 def create_interfaces(interfaces):
+    """Generates Karel program for the specified interface in package.json.
+    example:
+    PROGRAM mth_abs
+      %NOBUSYLAMP
+      %NOLOCKGROUP
+
+      VAR
+        out_reg : INTEGER
+        val : REAL
+      %from tpe.klh %import get_int_arg,get_real_arg
+      %from registers.klh %import set_real
+      %from math.builtins.klh %import abs
+
+      BEGIN
+        val = tpe__get_real_arg(1)
+        out_reg = tpe__get_int_arg(2)
+        registers__set_real(out_reg, math__abs(val))
+      END mth_abs
+    """
     for interface in interfaces:
         program = "PROGRAM {0}\n" \
                   "%NOBUSYLAMP\n" \
@@ -1159,6 +1178,8 @@ def gen_obj_mappings(pkgs, mappings, args, dep_graph):
 
 
 def find_fr_install_dir(search_locs, is64bit=False):
+    """Find install directory of roboguide looking through registry keys
+    """
     try:
         import winreg as wreg
 
@@ -1201,6 +1222,8 @@ def find_fr_install_dir(search_locs, is64bit=False):
     raise Exception("Can't find FANUC base-dir anywhere")
 
 def find_program(tool, search_locs):
+    """Helper function for `find_tools` to help find tool programs.
+    """
     for search_loc in search_locs:
         path = os.path.join(search_loc, tool)
         if os.path.exists(path):
@@ -1210,6 +1233,8 @@ def find_program(tool, search_locs):
     raise MissingKtransException("Can't find {} anywhere".format(tool))
 
 def find_ktrans_support_dir(fr_base_dir, version_string):
+    """Find support files directory of specified core version 
+    """
     logger.debug('Trying to find support dir for core version: {}'.format(version_string))
     version_dir = version_string.replace('.', '')
     support_dir = os.path.join(fr_base_dir, 'WinOLPC', 'Versions', version_dir, 'support')
@@ -1223,6 +1248,9 @@ def find_ktrans_support_dir(fr_base_dir, version_string):
         .format(version_string))
 
 def find_tools(search_locs, tools, args):
+    """Find the locations of the tools specified in macros:
+    tools = [KTRANS_BIN_NAME, KTRANSW_BIN_NAME, MAKETP_BIN_NAME, TPP_BIN_NAME, XML_BIN_NAME, KCDICT_BIN_NAME]
+    """
     tool_paths =[]
     for tool in tools:
         try:
@@ -1281,6 +1309,9 @@ def find_robotini(source_dir, args):
     return robot_ini_loc
 
 def parse_robotini(fpath):
+    """parse the robot.ini file into a struct, for use by rossum.
+    """
+    
     config = configparser.ConfigParser()
     config.read(fpath)
 
@@ -1328,6 +1359,9 @@ def parse_robotini(fpath):
         env=config['WinOLPC_Util']['Tpp-env'])
 
 def write_manifest(manifest, files, ipAddress):
+    """Write manifest file for kpush. Catagorize out source, test,
+      tp+, ls, xml/csv files.
+    """
 
     file_list = dict()
 
