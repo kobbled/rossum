@@ -1,0 +1,176 @@
+INFO     | This is rossum v0.1.7
+DEBUG    | Checking: E:\Dropbox\Programming\Git\Ka-Boost\build\robot.ini        
+WARNING  | No robot.ini in CWD, and no alternative provided, trying source space
+DEBUG    | Checking: E:\Dropbox\Programming\Git\Ka-Boost\lib\socket\robot.ini   
+INFO     | Found robot.ini in source space
+WARNING  | Found robot.ini contains potentially conflicting ktrans settings!       
+INFO     | Found Roboguide version: V9.1098 (Rev.F)
+DEBUG    | Most likely FANUC base-dir: C:\Program Files (x86)\FANUC
+INFO     | Using C:\Program Files (x86)\FANUC as FANUC software base directory     
+INFO     | ktrans.exe location: C:\Program Files (x86)\Fanuc\WinOLPC\bin\ktrans.exe
+INFO     | ktransw.cmd location: E:\Dropbox\Programming\Fanuc\rossum-distrib\ktransw.cmd
+INFO     | maketp.exe location: C:\Program Files (x86)\Fanuc\WinOLPC\bin\maketp.exe
+INFO     | tpp.bat location: E:\Dropbox\Programming\Fanuc\one-robotics\tp_plus\bin\tpp.bat
+INFO     | yamljson2xml.cmd location: E:\Dropbox\Programming\Fanuc\rossum-distrib\yamljson2xml.cmd
+INFO     | kcdictw.cmd location: E:\Dropbox\Programming\Fanuc\rossum-distrib\kcdictw.cmd
+INFO     | Setting default system core version to: V910-1
+DEBUG    | Trying to find support dir for core version: V910-1
+DEBUG    | Looking in C:\Program Files (x86)\FANUC\WinOLPC\Versions\V910-1\support ..
+DEBUG    | Found V910-1 support dir: C:\Program Files (x86)\FANUC\WinOLPC\Versions\V910-1\support
+INFO     | Karel core support dir: C:\Program Files (x86)\FANUC\WinOLPC\Versions\V910-1\support
+DEBUG    | Using build file template: E:\Dropbox\Programming\Fanuc\rossum-distrib\build.ninja.em
+INFO     | Source space(s) searched for packages (in order: src, args):
+INFO     |   E:\Dropbox\Programming\Git\Ka-Boost\lib\socket
+DEBUG    | Searching in E:\Dropbox\Programming\Git\Ka-Boost\lib\socket
+DEBUG    |   found 1 manifest(s)
+DEBUG    | Found 1 manifest(s) total
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\socket
+INFO     | Found 1 package(s) in source space(s):
+INFO     |   socket (v0.0.1)
+INFO     | Other location(s) searched for packages (ROSSUM_PKG_PATH):
+INFO     |   E:\Dropbox\Programming\Git\Ka-Boost\lib
+INFO     |   E:\Dropbox\Programming\Git\rossum_ws\src
+DEBUG    | Searching in E:\Dropbox\Programming\Git\Ka-Boost\lib
+DEBUG    |   found 24 manifest(s)
+DEBUG    | Searching in E:\Dropbox\Programming\Git\rossum_ws\src
+DEBUG    |   found 6 manifest(s)
+DEBUG    | Found 30 manifest(s) total
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\csv
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\display
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\draw
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\errors
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\files
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\forms
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\graph
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\hash
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\ktransw-macros
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\KUnit
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\math
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\matrix
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\multitask
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\paths
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\pose
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\queue
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\registers
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\sensors\tof
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\shapes
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\socket
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\Strings
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\system
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\TPE
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\Ka-Boost\lib\xmlib
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\rossum_ws\src\auto_frame
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\rossum_ws\src\cell1_config
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\rossum_ws\src\cell2_config
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\rossum_ws\src\cladding-workcell
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\rossum_ws\src\helper_structs
+DEBUG    | Loaded package.json from E:\Dropbox\Programming\Git\rossum_ws\src\scan_part
+INFO     | Found 30 package(s) in other location(s):
+INFO     |   csv (v0.0.1)
+INFO     |   display (v0.0.1)
+INFO     |   draw (v0.0.1)
+INFO     |   errors (v0.0.1)
+INFO     |   files (v0.0.1)
+INFO     |   forms (v0.0.1)
+INFO     |   graph (v0.0.1)
+INFO     |   Hash (v0.0.1)
+INFO     |   ktransw-macros (v0.0.1)
+INFO     |   KUnit (v1.0.0)
+INFO     |   math (v0.0.1)
+INFO     |   matrix (v0.0.1)
+INFO     |   multitask (v0.0.1)
+INFO     |   paths (v0.0.1)
+INFO     |   pose (v0.0.1)
+INFO     |   queue (v0.0.1)
+INFO     |   registers (v0.0.1)
+INFO     |   tof-sensor (v0.0.1)
+INFO     |   shapes (v0.0.1)
+INFO     |   socket (v0.0.1)
+INFO     |   Strings (v0.0.2)
+INFO     |   systemlib (v0.0.1)
+INFO     |   TPElib (v0.0.1)
+INFO     |   xml (v0.0.1)
+INFO     |   auto-frame (v0.0.1)
+INFO     |   cell1_config (v0.0.1)
+INFO     |   cell2_config (v0.0.1)
+INFO     |   cladding-workcell (v0.0.1)
+INFO     |   helper_structs (v0.0.1)
+INFO     |   scan_part (v0.0.1)
+DEBUG    | Resolving dependencies for: socket
+DEBUG    |   socket:
+DEBUG    |     ktransw-macros: found
+DEBUG    |     display: found
+DEBUG    |   display:
+DEBUG    |     errors: found
+DEBUG    |   errors:
+DEBUG    |     Strings: found
+DEBUG    |     systemlib: found
+DEBUG    |   systemlib:
+DEBUG    |     Strings: found
+DEBUG    |     ktransw-macros: found
+DEBUG    |     files: found
+DEBUG    |   files:
+DEBUG    |     errors: found
+DEBUG    |     Strings: found
+DEBUG    |     ktransw-macros: found
+DEBUG    |     registers: found
+DEBUG    |   registers:
+DEBUG    |     errors: found
+DEBUG    |     ktransw-macros: found
+DEBUG    |     Strings: found
+DEBUG    |     ktransw-macros: found
+DEBUG    |     files: found
+DEBUG    |     errors: found
+DEBUG    | Printing dependency tree for: socket
+DEBUG    |   <socket> 0.0.1 *
+DEBUG    |   |-- <ktransw-macros> 0.0.1
+DEBUG    |   |-- <display> 0.0.1
+DEBUG    |   |   |-- <errors> 0.0.1
+DEBUG    |   |   |   |-- <Strings> 0.0.2
+DEBUG    |   |   |-- <systemlib> 0.0.1 
+DEBUG    |   |   |-- <files> 0.0.1
+DEBUG    |   |   |   |-- <errors> 0.0.1
+DEBUG    |   |   |-- <registers> 0.0.1
+DEBUG    | Resolving includes for: socket, ktransw-macros, files, Strings, errors, display, registers, systemlib
+DEBUG    |   socket
+DEBUG    |     added 9 path(s)
+DEBUG    |   ktransw-macros
+DEBUG    |     added 1 path(s)
+DEBUG    |   files
+DEBUG    |     added 4 path(s)
+DEBUG    |   Strings
+DEBUG    |     added 1 path(s)
+DEBUG    |   errors
+DEBUG    |     added 2 path(s)
+DEBUG    |   display
+DEBUG    |     added 8 path(s)
+DEBUG    |   registers
+DEBUG    |     added 4 path(s)
+DEBUG    |   systemlib
+DEBUG    |     added 3 path(s)
+DEBUG    | Generating src to obj mappings for: socket, ktransw-macros, files, Strings, errors, display, registers, systemlib
+DEBUG    |   socket
+DEBUG    |     adding: src\socket.kl -> socket.pc
+DEBUG    |   ktransw-macros
+DEBUG    |   files
+DEBUG    |     adding: src\files.kl -> files.pc
+DEBUG    |   Strings
+DEBUG    |     adding: src\strings.kl -> strings.pc
+DEBUG    |   errors
+DEBUG    |     adding: src\errors.kl -> errors.pc
+DEBUG    |   display
+DEBUG    |     adding: src\display.kl -> display.pc
+DEBUG    |     adding: src\printlib.kl -> printlib.pc
+DEBUG    |   registers
+DEBUG    |     adding: src\registers.kl -> registers.pc
+DEBUG    |   systemlib
+DEBUG    |     adding: src\systemlib.kl -> systemlib.pc
+INFO     | Building 8 package(s)
+INFO     | Build configuration:
+INFO     |   source dir: E:\Dropbox\Programming\Git\Ka-Boost\lib\socket
+INFO     |   build dir : E:\Dropbox\Programming\Git\Ka-Boost\build
+INFO     |   robot.ini : E:\Dropbox\Programming\Git\Ka-Boost\lib\socket\robot.ini
+INFO     | Writing generated rules to E:\Dropbox\Programming\Git\Ka-Boost\build\build.ninja
+DEBUG    | Processing template
+DEBUG    | Shutting down empy
+INFO     | Configuration successful, you may now run 'ninja' in the build directory.
