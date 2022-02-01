@@ -43,17 +43,6 @@ to specify the path to `ktransw.cmd` as a command line argument to `rossum`.
 Note that this would have to be repeated each time a new build directory is
 created.
 
-| :warning: WARNING          |
-|:---------------------------|
-
-On windows machines the `python` alias can be overwritten by the py launcher where python is started in the terminal with `py -3`. The batch files are written with the `python` key. To create the alias type this into powershell:
-
-```powershell
-Set-Alias -Name python -Value "path\to\Python\Python39\python.exe"
-```
-
-replacing the value with the full path to the python executable in your PATH environment variables.
-
 ## Examples
 
 Please see [rossum_example_ws][] for an example workspace with some packages
@@ -207,7 +196,7 @@ optional arguments:
 
 ## robot.ini file example
 
-create robot.ini file in the top level of the source directory calling **setrobot** through a command prompt, and selecting the correct workcell created with Roboguide. *Ftp*, and *Tpp-env* will need to be added afterwards as they are Rossum specific directives.
+create robot.ini file in the top level of the source directory calling **setrobot** through a command prompt, and selecting the correct workcell created with Roboguide. *Ftp*, and *Env* will need to be added afterwards as they are Rossum specific directives.
 
 ```
 [WinOLPC_Util]
@@ -217,7 +206,7 @@ Path=C:\Program Files (x86)\FANUC\WinOLPC\Versions\V910-1\bin
 Support=C:\Users\<user>\Documents\My Workcells\cell\Robot_1\support
 Output=C:\Users\<user>\Documents\My Workcells\cell\Robot_1\output
 Ftp=127.0.0.1
-Tpp-env=C:\Users\<user>\Documents\My Workcells\cell\tpp\vars.tpp
+Env=C:\Users\<user>\Documents\My Workcells\cell\tpp\vars.tpp
 ```
 
 ## package.json file example

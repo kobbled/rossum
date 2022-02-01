@@ -1358,8 +1358,8 @@ def parse_robotini(fpath):
         config['WinOLPC_Util']['Ftp'] = os.environ.get(ENV_SERVER_IP)
 
     # handle tpp env
-    if "Tpp-env" not in config['WinOLPC_Util']:
-        config['WinOLPC_Util']['Tpp-env'] = ''
+    if "Env" not in config['WinOLPC_Util']:
+        config['WinOLPC_Util']['Env'] = ''
 
     return robotiniInfo(
         robot=config['WinOLPC_Util']['Robot'],
@@ -1369,7 +1369,7 @@ def parse_robotini(fpath):
         support=config['WinOLPC_Util']['Support'],
         output=config['WinOLPC_Util']['Output'],
         ftp=config['WinOLPC_Util']['Ftp'],
-        env=config['WinOLPC_Util']['Tpp-env'])
+        env=config['WinOLPC_Util']['Env'])
 
 def write_manifest(manifest, files, ipAddress):
     """Write manifest file for kpush. Catagorize out source, test,
