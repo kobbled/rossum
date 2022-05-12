@@ -132,6 +132,7 @@ RossumManifest = collections.namedtuple('RossumManifest',
     'tp '
     'tests '
     'test_depends '
+    'test_includes '
     'version '
     'interfaces '
     'interfaces_depends '
@@ -508,7 +509,7 @@ def main():
     all_pkgs = filter_packages(all_pkgs, dependency_graph)
 
     # all discovered pkgs get used for dependency and include path resolution,
-    resolve_includes(all_pkgs)
+    resolve_includes(all_pkgs, args)
 
     #determine any user defined macros to pass to ktransw
     resolve_macros(all_pkgs, args)
@@ -687,6 +688,7 @@ def parse_manifest(fpath):
         includes=mfest['includes'] if 'includes' in mfest else [],
         depends=mfest['depends'] if 'depends' in mfest else [],
         test_depends=mfest['tests-depends'] if 'tests-depends' in mfest else [],
+        test_includes=mfest['tests-includes'] if 'tests-includes' in mfest else [],
         interfaces=mfest['tp-interfaces'] if 'tp-interfaces' in mfest else [],
         interfaces_depends=mfest['interface-depends'] if 'interface-depends' in mfest else [],
         interface_files=['tp/{}.kl'.format(i['program_name']) for i in mfest['tp-interfaces']] if 'tp-interfaces' in mfest else [],
@@ -858,7 +860,7 @@ def dedup(seq):
             out.insert(0, e)
     return out
 
-def resolve_includes(pkgs):
+def resolve_includes(pkgs, args):
     """ Gather include directories for all packages in 'pkgs'.
     """
     pkg_names = [p.manifest.name for p in pkgs]
@@ -867,12 +869,12 @@ def resolve_includes(pkgs):
     for pkg in pkgs:
         visited = set()
         logger.debug("  {}".format(pkg.manifest.name))
-        inc_dirs = dedup(resolve_includes_for_pkg(pkg, visited))
+        inc_dirs = dedup(resolve_includes_for_pkg(pkg, visited, args))
         pkg.include_dirs.extend(inc_dirs)
         logger.debug("    added {} path(s)".format(len(inc_dirs)))
 
 
-def resolve_includes_for_pkg(pkg, visited):
+def resolve_includes_for_pkg(pkg, visited, args):
     """ Recursively gather include directories for a specific package.
     Makes all include directories absolute as well.
     """
@@ -882,10 +884,14 @@ def resolve_includes_for_pkg(pkg, visited):
         for inc_dir in pkg.manifest.includes:
             abs_inc = os.path.abspath(os.path.join(pkg.location, inc_dir))
             inc_dirs.append(abs_inc)
+        if (args.inc_tests):
+          for inc_dir in pkg.manifest.test_includes:
+            abs_inc = os.path.abspath(os.path.join(pkg.location, inc_dir))
+            inc_dirs.append(abs_inc)
         visited.add(pkg.manifest.name)
         # then ask dependencies
         for dep_pkg in pkg.dependencies:
-            inc_dirs.extend(resolve_includes_for_pkg(dep_pkg, visited))
+            inc_dirs.extend(resolve_includes_for_pkg(dep_pkg, visited, args))
     return inc_dirs
 
 def resolve_macros(pkgs, args):
