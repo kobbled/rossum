@@ -222,27 +222,43 @@ Env=C:\Users\<user>\Documents\My Workcells\cell\tpp\vars.tpp
   "source" : [
     "src/source.kl"
   ],
-  "tests" : [
-    "test/test_source.kl"
-  ],
   "includes" : [
     "include"
   ],
   "depends" : [
-    "KUnit",
+    "ktransw-macros",
     "Strings",
     "math",
     "registers",
-    "TPElib",
-    "ktransw-macros"
+    "TPElib"
+  ],
+  "tp" : [
+    "tp/move.ls"
   ],
   "tp-interfaces" : [
     {"routine" : "source__func01", "program_name" : "func01"},
     {"routine" : "source__func02", "program_name" : "func02"},
   ],
+  "forms" : [
+    "forms/frmnmeeg.ftx"
+  ],
   "macros" : [
     "DEBUG=TRUE",
     "BUILD_LOG=FALSE"
+  ],
+
+  "tests" : [
+    "test/test_source.kl"
+  ],
+  "tests-includes" : [
+    "test/configs"
+  ],
+  "tests-depends" : [
+    "display",
+    "KUnit"
+  ],
+  "tests-tp" : [
+    "test/tp/test_move.tpp"
   ]
 }
 ```
