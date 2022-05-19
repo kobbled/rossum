@@ -1156,9 +1156,9 @@ def gen_obj_mappings(pkgs, mappings, args, dep_graph):
         # include LS files in source
         if args.build_ls:
           pkg.manifest.source.extend(pkg.manifest.tp)
-        
-        if args.inc_tests and hasattr(pkg.manifest, 'test_tp'):
-          pkg.manifest.source.extend(pkg.manifest.test_tp)
+
+          if args.inc_tests and hasattr(pkg.manifest, 'test_tp'):
+            pkg.manifest.source.extend(pkg.manifest.test_tp)
 
         for src in pkg.manifest.source:
             src = src.replace('/', '\\')
