@@ -192,6 +192,7 @@ TPInterfaces = collections.namedtuple('TPInterfaces',
     'name '
     'alias '
     'include_file '
+    'depends '
     'path '
     'arguments '
     'return_type'
@@ -958,6 +959,7 @@ def get_interfaces(pkgs):
                                     alias= interface['program_name'],
                                     include_file= os.path.basename(fname),
                                     path= '{}\\tp\\{}.kl'.format(pkg.location, interface['program_name']),
+                                    depends= pkgs[0].manifest.interfaces_depends,
                                     arguments= arguments,
                                     return_type= ret_type
                                 ))
@@ -1056,7 +1058,7 @@ def create_interfaces(interfaces):
           program += "%from registers.klh %import set_{0}\n".format(t_return)
 
         #include function for handling position types
-        if any(args[1].lower() in pose_types for args in interface.arguments):
+        if 'pose' in interface.depends:
           program += "%from pose.klh %import get_posreg_xyz, get_posreg_joint, set_posreg_xyz, set_posreg_joint\n"
 
 
