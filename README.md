@@ -242,21 +242,25 @@ Env=C:\Users\<user>\Documents\My Workcells\cell\tpp\vars.tpp
   "forms" : [
     "forms/frmnmeeg.ftx"
   ],
+  //macro commands set in programs. (for example building for debugging or production)
   "macros" : [
     "DEBUG=TRUE",
     "BUILD_LOG=FALSE"
   ],
-
+  //test files to build when using the -t option
   "tests" : [
     "test/test_source.kl"
   ],
+  //includes needed for tests
   "tests-includes" : [
     "test/configs"
   ],
+  //test dependencies
   "tests-depends" : [
     "display",
     "KUnit"
   ],
+  //Only builds TP files when -t option is specified
   "tests-tp" : [
     "test/tp/test_move.tpp"
   ],
