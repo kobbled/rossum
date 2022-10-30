@@ -138,7 +138,8 @@ RossumManifest = collections.namedtuple('RossumManifest',
     'interfaces '
     'interfaces_depends '
     'interface_files '
-    'macros'
+    'macros '
+    'tpp_compile_env'
 )
 
 # a rossum package contains both raw, uninterpreted data (the manifest), as
@@ -581,6 +582,11 @@ def main():
     bs_info = RossumSpaceInfo(path=build_dir)
     sp_infos = [RossumSpaceInfo(path=p) for p in src_space_dirs]
     robini_info = KtransRobotIniInfo(path=robot_ini_loc, ftp=configs['ftp'], env=configs['env'])
+    make_tpp_env_file = [p.manifest.tpp_compile_env for p in src_space_pkgs]
+    if len(make_tpp_env_file) > 0:
+      make_tpp_env_file = make_tpp_env_file[0]
+    else:
+      make_tpp_env_file = None
 
     ws = RossumWorkspace(build=bs_info, sources=sp_infos,
         robot_ini=robini_info, pkgs=build_pkgs)
@@ -617,6 +623,7 @@ def main():
         'preprocess_karel' : copy_karel,
         'compiletp'      : args.compiletp,
         'hastpp'         : args.hastpp,
+        'makeenv'        : make_tpp_env_file,
     }
     # write out ninja template
     ninja_fl = open(build_file_path, 'w')
@@ -695,7 +702,8 @@ def parse_manifest(fpath):
         interfaces=mfest['tp-interfaces'] if 'tp-interfaces' in mfest else [],
         interfaces_depends=mfest['interface-depends'] if 'interface-depends' in mfest else [],
         interface_files=['tp/{}.kl'.format(i['program_name']) for i in mfest['tp-interfaces']] if 'tp-interfaces' in mfest else [],
-        macros=mfest['macros'] if 'macros' in mfest else [])
+        macros=mfest['macros'] if 'macros' in mfest else [],
+        tpp_compile_env=mfest['tpp_compile_env'] if 'tpp_compile_env' in mfest else [])
 
 
 def find_pkgs(dirs):
@@ -1058,8 +1066,8 @@ def create_interfaces(interfaces):
           program += "%from registers.klh %import set_{0}\n".format(t_return)
 
         #include function for handling position types
-        if 'pose' in interface.depends:
-          program += "%from pose.klh %import get_posreg_xyz, get_posreg_joint, set_posreg_xyz, set_posreg_joint\n"
+        #if 'pose' in interface.depends:
+        program += "%from pose.klh %import get_posreg_xyz, get_posreg_joint, set_posreg_xyz, set_posreg_joint\n"
 
 
         #include header files
