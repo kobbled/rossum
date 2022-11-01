@@ -487,14 +487,16 @@ def main():
     if (not args.no_env) and (ENV_PKG_PATH in os.environ):
         logger.info("Other location(s) searched for packages ({}):".format(ENV_PKG_PATH))
         other_pkg_dirs = [p for p in os.environ[ENV_PKG_PATH].split(os.pathsep) if len(p) > 0]
-        for p in other_pkg_dirs:
-            logger.info('  {0}'.format(p))
+        if logger.getEffectiveLevel() == logging.DEBUG:
+          for p in other_pkg_dirs:
+              logger.debug('  {0}'.format(p))
 
         other_pkgs.extend(find_pkgs(other_pkg_dirs))
         other_pkgs = remove_duplicates(other_pkgs)
         logger.info("Found {0} package(s) in other location(s):".format(len(other_pkgs)))
-        for pkg in other_pkgs:
-            logger.info("  {0} (v{1})".format(pkg.manifest.name, pkg.manifest.version))
+        if logger.getEffectiveLevel() == logging.DEBUG:
+          for pkg in other_pkgs:
+              logger.debug("  {0} (v{1})".format(pkg.manifest.name, pkg.manifest.version))
 
 
     # process all discovered pkgs
