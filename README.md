@@ -265,7 +265,7 @@ Env=C:\Users\<user>\Documents\My Workcells\cell\tpp\vars.tpp
     "test/tp/test_move.tpp"
   ],
   // This option is used to create a karel hash table from the TP+ environment file specified in robot.ini file
-  "tpp_compile_env" : {"name" : "tppenv", "clear" : false}
+  "tpp_compile_env" : {"name" : "tppenv", "clear" : false, "config" : "env"}
 }
 ```
 

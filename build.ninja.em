@@ -108,7 +108,7 @@ rule tpp_tp
   command = "@(tools['tpp']['path'])" $
                $in $
                -o $out @[if len(ws.robot_ini.env) > 0]@ -e "@(ws.robot_ini.env)"@[end if]@ $ $
-               @[if makeenv]@ -k "@(makeenv['name'])","@(makeenv['clear'])" @[end if]@ $
+               @[if makeenv]@ -k "@(makeenv['name'])","@(makeenv['clear'])","@(makeenv['config'])" @[end if]@ $
                $lib_includes $
                && "@(tools['tpp']['compile'])" $out /config "@(ws.robot_ini.path)" $
                && del $out
@@ -120,7 +120,7 @@ rule tpp_ls
   command = "@(tools['tpp']['path'])" $
                $in $
                -o $out @[if len(ws.robot_ini.env) > 0]@ -e "@(ws.robot_ini.env)"@[end if]@ $ $
-               @[if makeenv]@ -k "@(makeenv['name'])","@(makeenv['clear'])" @[end if]@ $
+               @[if makeenv]@ -k "@(makeenv['name'])","@(makeenv['clear'])","@(makeenv['config'])" @[end if]@ $
                $lib_includes $
 @[end if]@
 @[end if]@
