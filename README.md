@@ -77,6 +77,7 @@ See [Environment Variables](https://github.com/kobbled/rossum#environment-variab
 > 
 > If using **TP+**, and link to you controller environment file must be placed in the _robot.ini_ like:
 > `ENV=C:\path\to\env.tpp`
+>  **!IMPORTANT** Full path to `env.tpp` must be specified. DO NOT use relative paths here.
 
 ## Dependencies
 

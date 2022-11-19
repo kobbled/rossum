@@ -1,4 +1,5 @@
-Send2Trash>=1.5.0
+Send2Trash>=1.8.0
 empy>=3.3.4
-pyyaml>=5.1.0
-ordered-set>=3.5.0
+PyYAML==6.0
+ordered-set>=4.1.0
+lark==0.11.3
