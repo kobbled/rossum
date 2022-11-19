@@ -115,6 +115,12 @@ that show how to use `rossum`.
   kpush
 ```
 
+**delete files from build dir on robot controller**
+
+```
+kpush --delete
+```
+
 **clean out build file**
 
 ```

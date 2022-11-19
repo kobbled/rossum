@@ -19,6 +19,7 @@ import os
 import em
 import yaml
 import collections
+import fileinput
 from ordered_set import OrderedSet
 
 FILE_MANIFEST = '.man_log'
@@ -44,6 +45,8 @@ def main():
   
   parser.add_argument('-i', '--exclude-interfaces', action='store_true', dest='exclude_interface',
         help='Be verbose')
+  parser.add_argument('-d', '--delete', action='store_true', dest='only_delete',
+        help='delete batch off of controller', default=False)
   args = parser.parse_args()
 
   #initialize sorted manifest
@@ -82,16 +85,22 @@ def main():
         sortfile(key, parent, ftpManifest, args)
   
   # write out ftp push template
-  ftp_fl = open(ftp_file_path, 'w')
-  globls = {
-      'ip' : file_list['ip'],
-      'files'   : ftpManifest
-  }
-  ftp_interp = em.Interpreter(
-          output=ftp_fl, globals=dict(globls),
-          options={em.RAW_OPT : True, em.BUFFERED_OPT : True})
-  ftp_interp.file(open(template_ftp_path))
-  ftp_interp.shutdown()
+  with open(ftp_file_path, 'w') as ftp_fl:
+    globls = {
+        'ip' : file_list['ip'],
+        'files'   : ftpManifest,
+        'delete_only' : args.only_delete
+    }
+    ftp_interp = em.Interpreter(
+            output=ftp_fl, globals=dict(globls),
+            options={em.RAW_OPT : True, em.BUFFERED_OPT : True})
+    ftp_interp.file(open(template_ftp_path))
+    ftp_interp.shutdown()
+
+  #remove all blank lines
+  for line in fileinput.FileInput(ftp_file_path,inplace=1):
+    if line.rstrip():
+        print(line)
 
 
 def sortfile(typ, fl, manifest, args):

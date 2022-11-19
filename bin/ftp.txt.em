@@ -3,6 +3,15 @@ anon
 bin
 prompt
 cd md:\
+
+@[if len(files['interface']) > 0]@
+@# del interfaces
+mdel @
+@[for fl in files['interface']]@
+"@(fl)" @
+@[end for]@
+@[end if]@
+
 @[if len(files['karel']) > 0]@
 @# delete pc files
 mdel @
@@ -25,6 +34,8 @@ mdel @
 @[end for]@
 @[end if]@
 
+@[if not delete_only]@
+
 @[if len(files['karel']) > 0]@
 @# put pc files
 mput @
@@ -42,17 +53,14 @@ mput @
 @[end if]@
 
 @[if len(files['interface']) > 0]@
-@# del interfaces
-mdel @
-@[for fl in files['interface']]@
-"@(fl)" @
-@[end for]@
-
 @# add interfaces
 mput @
 @[for fl in files['interface']]@
 "@(fl)" @
 @[end for]@
+@[end if]@
+
+@# end put
 @[end if]@
 
 
@@ -65,11 +73,16 @@ mdel @
 "@(fl)" @
 @[end for]@
 
+@[if not delete_only]@
+
 @# put form files
 mput @
 @[for fl in files['forms']]@
 "@(fl)" @
 @[end for]@
+@[end if]@
+
+@# end put
 @[end if]@
 
 @[if len(files['data']) > 0]@
@@ -81,11 +94,16 @@ mdel @
 "@(fl)" @
 @[end for]@
 
+@[if not delete_only]@
+
 @# upload data files
 mput @
 @[for fl in files['data']]@
 "@(fl)" @
 @[end for]@
+@[end if]@
+
+@# end put
 @[end if]@
 
 quit
