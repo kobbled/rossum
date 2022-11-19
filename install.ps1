@@ -33,6 +33,10 @@ function rossum_install {
     $global:NEWPATH = $global:NEWPATH + ";$PSScriptRoot\bin"
     Write-Output "Added to Path: $PSScriptRoot\bin"
 
+    #add environment variables
+    [Environment]::SetEnvironmentVariable("ROSSUM_CORE_VERSION", "V910-1", "User");
+    [Environment]::SetEnvironmentVariable("ROSSUM_PKG_PATH", "", "User");
+    [Environment]::SetEnvironmentVariable("ROSSUM_SERVER_IP", "127.0.0.1", "User");
 }
 
 
