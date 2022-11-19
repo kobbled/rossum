@@ -17,16 +17,14 @@ This tool introduces a package based workflow for Karel development: packages ar
 pip install -r requirements.txt
 ```
 * This package will only work on Windows. Karel compilers currently have no support on linux machines, nor does Roboguide.
-* The generated Ninja build files require a recent (> 1.7.1) version of [Ninja][] to be present.
-* For translating Karel sources, `rossum` expects [ktransw][] version 0.2.2 or newer. Refer to the `ktransw` documentation for any additional requirements that `ktransw` may have.
-* yaml and json conversion into xml is done with the [yamljson2xml](https://github.com/kobbled/yamljson2xml) python package. Follow readme file of the repository to install.
+* The generated Ninja build files require a recent (> 1.7.1) version of [Ninja][] to be present..
 * FANUC Roboguide must also be installed with OPLC bin programs, **maketp**, **ktrans**, and **setrobot**. An emulation of your workcell should be made through Roboguide or OLPCpro, typically stored in *%USERPROFILE%/Documents\My Workcells*.
 
 
 ## Installation
 
 1. Install Python
-2. Install Ninja from https://github.com/ninja-build/ninja/releases. Download the `ninja-win.zip` file, and extracting to a user specified directory. Make sure you add this to your environment `Path`.
+2. Install Ninja from https://github.com/ninja-build/ninja/releases. Download the `ninja-win.zip` file, and extract to a user specified directory. Make sure you add this to your environment `Path`.
 ```powershell
 [Environment]::SetEnvironmentVariable("Path", $env:Path + ";" + "path\to\ninja", "User");
 ```
