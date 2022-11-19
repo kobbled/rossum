@@ -1,0 +1,3 @@
+[submodule "deps/ktransw"]
+	path = deps/ktransw
+	url = https://github.com/kobbled/ktransw_py
