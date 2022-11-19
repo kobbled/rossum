@@ -23,13 +23,13 @@ pip install -r requirements.txt
 
 ## Installation
 
-1. Install Python
-2. Install Ninja from https://github.com/ninja-build/ninja/releases. Download the `ninja-win.zip` file, and extract to a user specified directory. Make sure you add this to your environment `Path`.
+1. Install Git & Python
+2. (optional) Create a python virtual environment `python -m venv <name>`
+3. Install Ninja from https://github.com/ninja-build/ninja/releases. Download the `ninja-win.zip` file, and extract to a user specified directory. Make sure you add this to your environment `Path`.
 ```powershell
 [Environment]::SetEnvironmentVariable("Path", $env:Path + ";" + "path\to\ninja", "User");
 ```
-3. Clone the repo `git clone https://github.com/kobbled/rossum`
-4. (optional) Create a python virtual environment `python -m venv <name>`
+4. Clone the repo `git clone https://github.com/kobbled/rossum` to a user specified directory. If using an python virtual environment this can be cloned within your venv is you so choose.
 5. Run the install file in a powershell terminal, with the optional argument specifying the path to your created venv.
 ```powershell
 . ./install.ps1 <path\to\venv>
