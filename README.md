@@ -17,9 +17,9 @@ This tool introduces a package based workflow for Karel development: packages ar
 ```powershell
 [Environment]::SetEnvironmentVariable("Path", $env:Path + ";" + "path\to\ninja", "User");
 ```
-4. Clone the repo and submodules to a user specified directory. If using an python virtual environment this can be cloned within your venv is you so choose.
+4. Clone the repo and submodules to a user specified directory. If using an python virtual environment this can be cloned within your venv if you so choose.
 ```
-`git clone https://github.com/kobbled/rossum` --recurse-submodules
+git clone https://github.com/kobbled/rossum --recurse-submodules
 ```
 5. Run the install file in a powershell terminal, with the optional argument specifying the path to your created venv.
 ```powershell
