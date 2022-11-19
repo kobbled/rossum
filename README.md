@@ -25,23 +25,35 @@ pip install -r requirements.txt
 
 ## Installation
 
-The 0.2.0 release is a convenience release that includes all the necessary
-tools to quickly setup a working installation of rossum. Download it from the
-[releases][] page.
+1. Install Python
+2. Install Ninja from https://github.com/ninja-build/ninja/releases. Download the `ninja-win.zip` file, and extracting to a user specified directory. Make sure you add this to your environment `Path`.
+```powershell
+[Environment]::SetEnvironmentVariable("Path", $env:Path + ";" + "path\to\ninja", "User");
+```
+3. Clone the repo `git clone https://github.com/kobbled/rossum`
+4. (optional) Create a python virtual environment `python -m venv <name>`
+5. Run the install file in a powershell terminal, with the optional argument specifying the path to your created venv.
+```powershell
+. ./install.ps1 <path\to\venv>
+```
 
-Alternatively, clone this repository to your machine and add the directory
-containing `rossum.py` and `rossum.cmd` to your `PATH`. Command sessions
-opened after setting up the `PATH` should be able to successfully run `rossum`
-from anywhere.
+Alternatively a convenience distribution can be downloaded from https://github.com/kobbled/rossum/releases. Simply extract to a user specified location, and add this location to your environment `Path`.
 
-For installation of `ktransw`, see [ktransw][].
+```powershell
+[Environment]::SetEnvironmentVariable("Path", $env:Path + ";" + "path\to\rossum-distrib", "User");
+```
 
-For maximum convenience, make sure that `ninja.exe` and `ktransw.cmd` are also
-on the `PATH`. An alternative would be to copy `ninja.exe` to the build
-directory of the workspace (the one containing the generated build file) and
-to specify the path to `ktransw.cmd` as a command line argument to `rossum`.
-Note that this would have to be repeated each time a new build directory is
-created.
+</br>
+
+> [!**NOTE**]
+>
+> On windows machines the `python` alias can be overwritten by the py launcher where python is started in the terminal with `py -3`. The batch files are written with the `python` key. To create the alias type this into powershell:
+> ```powershell
+> Set-Alias -Name python -Value "path\to\Python\Python39\python.exe"
+> ```
+> replacing the value with the full path to the python executable in your PATH environment variables.
+
+</br>
 
 ## Examples
 
@@ -59,7 +71,9 @@ that show how to use `rossum`.
 * FANUC Dictionary (.utx)
 * FANUC Form (.ftx)
 
-> **_NOTE:_** Look at the User Form example in [rossum_example_ws][], *basic_test\lib_a*. Preprocessor directives have been expanded in .utx, and .ftx files using [ktransw][]. In order to properly compile dictionary files, `ninja` might have to be run twice to first create the karel include file, and then build the accompanying karel file. 
+> [!**NOTE**]
+>
+>Look at the User Form example in [rossum_example_ws][], *basic_test\lib_a*. Preprocessor directives have been expanded in .utx, and .ftx files using [ktransw][]. In order to properly compile dictionary files, `ninja` might have to be run twice to first create the karel include file, and then build the accompanying karel file. 
 
 
 ## Usage
@@ -101,7 +115,9 @@ that show how to use `rossum`.
   rossum C:\foo\bar\src -i
 ```
 
-> **_NOTE:_**  This option depends on the [kl-TPE](https://github.com/kobbled/kl-TPE),[kl-pose](https://github.com/kobbled/kl-pose), and [kl-registers](https://github.com/kobbled/kl-registers) packages from the [Ka-Boost](https://github.com/kobbled/Ka-Boost) libraries. If Ka-Boost is installed make sure to add theses libraries to the dependencies of the package you are build in with this option.
+> [!**NOTE**]
+>
+>  This option depends on the [kl-TPE](https://github.com/kobbled/kl-TPE),[kl-pose](https://github.com/kobbled/kl-pose), and [kl-registers](https://github.com/kobbled/kl-registers) packages from the [Ka-Boost](https://github.com/kobbled/Ka-Boost) libraries. If Ka-Boost is installed make sure to add theses libraries to the dependencies of the package you are build in with this option.
 
 ```json
 {
