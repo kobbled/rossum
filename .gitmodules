@@ -1,6 +1,3 @@
 [submodule "deps/ktransw"]
 	path = deps/ktransw
 	url = https://github.com/kobbled/ktransw_py
-[submodule "deps/yamljson2xml"]
-	path = deps/yamljson2xml
-	url = https://github.com/kobbled/yamljson2xml
