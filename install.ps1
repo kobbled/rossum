@@ -14,7 +14,7 @@ function ktransw_install {
 function yaml_install {
     Write-Output "Installing yamljson2xml ..."
     cd "$PSScriptRoot\deps\yamljson2xml"
-    python setup.py install
+    python -m pip install .
     cd "$PSScriptRoot"
 
     #add ktransw to path
