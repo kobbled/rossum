@@ -25,7 +25,7 @@ from ordered_set import OrderedSet
 FILE_MANIFEST = '.man_log'
 
 FTP_FILE_NAME='ftp.txt'
-FTP_FILE_TEMPLATE_NAME='ftp.txt.em'
+FTP_FILE_TEMPLATE_NAME='templates\\ftp.txt.em'
 
 DATA_TYPES = ('karel', 'src', 'test', 'tp', 'test_tp', 
               'forms', 'test_forms', 'data', 'test_data', 'interface')

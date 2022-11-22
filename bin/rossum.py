@@ -69,7 +69,7 @@ ENV_DEFAULT_CORE_VERSION='ROSSUM_CORE_VERSION'
 ENV_SERVER_IP='ROSSUM_SERVER_IP'
 
 BUILD_FILE_NAME='build.ninja'
-BUILD_FILE_TEMPLATE_NAME='build.ninja.em'
+BUILD_FILE_TEMPLATE_NAME='templates\\build.ninja.em'
 
 FANUC_SEARCH_PATH = [
     'C:\\Program Files\\Fanuc',
