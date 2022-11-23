@@ -41,6 +41,10 @@ import collections
 import logging
 logger=None
 
+#Turn on for building executable
+BUILD_STANDALONE = False
+# -------
+
 
 ROSSUM_VERSION='0.1.7'
 
@@ -79,11 +83,18 @@ FANUC_SEARCH_PATH = [
 ]
 
 KTRANS_BIN_NAME='ktrans.exe'
-KTRANSW_BIN_NAME='ktransw.cmd'
 MAKETP_BIN_NAME='maketp.exe'
 TPP_BIN_NAME='tpp.bat'
-XML_BIN_NAME='yamljson2xml.cmd'
-KCDICT_BIN_NAME='kcdictw.cmd'
+
+if BUILD_STANDALONE:
+  KTRANSW_BIN_NAME='ktransw.exe'
+  XML_BIN_NAME='yamljson2xml.exe'
+  KCDICT_BIN_NAME='kcdictw.exe'
+else:
+  KTRANSW_BIN_NAME='ktransw.cmd'
+  XML_BIN_NAME='yamljson2xml.cmd'
+  KCDICT_BIN_NAME='kcdictw.cmd'
+
 
 KTRANS_SEARCH_PATH = [
     'C:\\Program Files\\Fanuc\\WinOLPC\\bin',
