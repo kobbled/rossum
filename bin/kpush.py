@@ -97,6 +97,10 @@ def main():
     ftp_interp.file(open(template_ftp_path))
     ftp_interp.shutdown()
 
+  #delete .bak file
+  if os.path.exists(ftp_file_path + ".bak"):
+    os.remove(ftp_file_path + ".bak")
+
   #remove all blank lines
   for line in fileinput.FileInput(ftp_file_path,inplace=1):
     if line.rstrip():
