@@ -1057,7 +1057,7 @@ def create_interfaces(interfaces):
         
         # load applicable tpe interfaces
         if interface.return_type or interface.arguments:
-          program += "%from tpe.klh %import "
+          program += "%from tpe.klh %import get_int_arg, get_real_arg, get_string_arg\n"
         
         #use set to remove duplicates
         load_funcs = set()
@@ -1066,12 +1066,6 @@ def create_interfaces(interfaces):
           load_funcs.add("get_{0}_arg".format(t_arg))
         if interface.return_type:
           load_funcs.add("get_int_arg")
-        #add function list to program
-        funcs_str = ''
-        for func in load_funcs:
-          funcs_str += str(func) + ','
-        #take out last comma
-        program += funcs_str[:-1] + "\n"
         
         #load write to register function
         if interface.return_type:
