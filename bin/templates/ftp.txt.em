@@ -4,14 +4,6 @@ bin
 prompt
 cd md:\
 
-@[if len(files['interface']) > 0]@
-@# del interfaces
-mdel @
-@[for fl in files['interface']]@
-"@(fl)" @
-@[end for]@
-@[end if]@
-
 @[if len(files['karel']) > 0]@
 @# delete pc files
 mdel @
@@ -30,6 +22,14 @@ mdel @
 @# delete tp files
 mdel @
 @[for fl in files['tp']]@
+"@(fl)" @
+@[end for]@
+@[end if]@
+
+@[if len(files['interface']) > 0]@
+@# del interfaces
+mdel @
+@[for fl in files['interface']]@
 "@(fl)" @
 @[end for]@
 @[end if]@
