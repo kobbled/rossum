@@ -291,6 +291,7 @@ Env=C:\Users\<user>\Documents\My Workcells\cell\tpp\vars.tpp
   "tp-interfaces" : [
     {"routine" : "source__func01", "program_name" : "func01"},
     {"routine" : "source__func02", "program_name" : "func02"},
+    {"routine" : "source__func02", "program_name" : "func02", "default_params" : {"2": 1, "3": "default_string"}},
   ],
   "forms" : [
     "forms/frmnmeeg.ftx"
@@ -327,14 +328,14 @@ Env=C:\Users\<user>\Documents\My Workcells\cell\tpp\vars.tpp
 Teach pendant interfaces are a way of exposing karel routines, for usage in teach pendant (TP) programs. Inherently you are not allowed to access karel routines with the *CALL* function in TP programs. You are able to call karel programs within TP programs. Rossum provides a way to automatically create a karel program wrapper around a specified routine. For instance if you want to expose a routine definition:
 
 ```
-ROUTINE func01(i : INTEGER; r : REAL; p : XYZWPR) : INTEGER
+ROUTINE func01(p : XYZWPR; i : INTEGER; r : REAL) : INTEGER
 ```
 
 and create a wrapper program called **tp_func01**, you can define an interface in the package manifest:
 
 ```
 "tp-interfaces" : [
-    {"routine" : "func01", "program_name" : "tp_func01"}
+    {"routine" : "func01", "program_name" : "tp_func01", "default_params" : {"2": 1, "3": 0.0}}
   ]
 ```
 
@@ -350,6 +351,10 @@ If an input argument is a position type, the corresponding TPE arguement is the 
 * XYZWPR
 * JOINTPOS
 
+Default arguements can also be specified using the _"default_params"_ field. where the `key:value` pair is the argument number (index starting at 1), and the default value you would like to specify. 
+
+In the case for **"func01"** the 2nd integer argument will default to 1 if not included, and argument 3 will default to 0.0. There currently is no mechanism to leave argument 2 blank, but declare a value for argument 3. Therfore all subsequent arguments also have to be excluded for default arguments to work. This means that the arguments must be ordered in a manner that subsequent arguments would not need to be declared if the current argument is not specified.
+ 
 ### user macros
 
 package/project wide pre-processor macros can be defined either from the command line or the package manifest. From the command line macros are invoked the same way they are in GPP (see [GPP documentation][GPP]), with **-D***name=val*, or **/D***name=val*. Macros can be included in the package manifest as shown in [example package.json](#packagejson-file-example).

@@ -966,8 +966,19 @@ def get_interfaces(pkgs):
                                 routine = m.group()
                                 var_matches = re.findall(r"(\w+)\s*\:\s*(\w+)\s*(;|\))",routine)
                                 arguments = []
-                                for v in var_matches:
-                                    arguments.append([v[0], v[1]])
+
+                                if 'default_params' in interface:
+                                  #convert keys to integers
+                                  default_args = {int(k)-1:v for k,v in interface['default_params'].items()}
+                                else:
+                                  default_args = {}
+                                
+                                #for var_matches with index
+                                for i, v in enumerate(var_matches):
+                                  if i in default_args:
+                                    arguments.append([v[0], v[1], default_args[i]])
+                                  else:
+                                    arguments.append([v[0], v[1], None])
 
                                 #store return type
                                 if m.group(3):
@@ -1000,7 +1011,7 @@ def create_interfaces(interfaces):
       VAR
         out_reg : INTEGER
         val : REAL
-      %from tpe.klh %import get_int_arg,get_real_arg
+      %include tpe.klh
       %from registers.klh %import set_real
       %from math.builtins.klh %import abs
 
@@ -1057,7 +1068,7 @@ def create_interfaces(interfaces):
         
         # load applicable tpe interfaces
         if interface.return_type or interface.arguments:
-          program += "%from tpe.klh %import get_int_arg, get_real_arg, get_string_arg, get_boolean_arg\n"
+          program += "%include tpe.klh\n"
         
         #use set to remove duplicates
         load_funcs = set()
@@ -1087,6 +1098,14 @@ def create_interfaces(interfaces):
         for args in interface.arguments:
             t_arg = 'int' if args[1].lower() == 'integer' else args[1].lower()
 
+            #check for default values
+            has_default = False
+            if args[2]:
+              program += 'IF NOT tpe__parameter_exists({0}) THEN\n'.format(i)
+              has_default = True
+              program += '\t{0} = {1}\n'.format(args[0], args[2])
+              program += 'ELSE\n'
+
             if args[1].lower() in pose_types:
               if args[1].lower() in ['xyzwpr','position']: t_arg = 'xyz'
               if args[1].lower() in 'jointpos': t_arg = 'joint'
@@ -1094,6 +1113,9 @@ def create_interfaces(interfaces):
               program += '\tpr_num{0} = tpe__get_int_arg({0})\n'.format(i)
             else:
               program += '\t{0} = tpe__get_{1}_arg({2})\n'.format(args[0], t_arg, i)
+
+            if has_default:
+              program += 'ENDIF\n'
 
             arg_list.append(args[0])
             i += 1
