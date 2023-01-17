@@ -1027,7 +1027,7 @@ def create_interfaces(interfaces):
                   "%NOLOCKGROUP\n" \
                   "\n".format(interface.alias)
 
-        pose_types = ('position', 'xyzwpr', 'jointpos')
+        pose_types = ('position', 'xyzwpr', 'jointpos', 'vector')
         
         if interface.return_type or interface.arguments:
           program += 'VAR\n'
@@ -1085,7 +1085,7 @@ def create_interfaces(interfaces):
 
         #include function for handling position types
         #if 'pose' in interface.depends:
-        program += "%from pose.klh %import get_posreg_xyz, get_posreg_joint, set_posreg_xyz, set_posreg_joint\n"
+        program += "%from pose.klh %import get_posreg_xyz, get_posreg_joint, set_posreg_xyz, set_posreg_joint, set_vector_to_posreg\n"
 
 
         #include header files
@@ -1124,11 +1124,13 @@ def create_interfaces(interfaces):
         for key, value in pr_dict.items():
           if value['type'] in ['xyzwpr','position']: value['type'] = 'xyz'
           if value['type'] in 'jointpos': value['type'] = 'joint'
-
-          if value['group'] == 'None':
-            program += '\t{0} = pose__get_posreg_{1}({2}, 1)\n'.format(value['map_var'], value['type'], key)
+          if value['type'] == 'vector':
+            program += '\t{0} = tpe__get_vector_arg({1})\n'.format(value['map_var'], key)
           else:
-            program += '\t{0} = pose__get_posreg_{1}({2}, {3})\n'.format(value['map_var'], value['type'], key, value['group'])
+            if value['group'] == 'None':
+              program += '\t{0} = pose__get_posreg_{1}({2}, 1)\n'.format(value['map_var'], value['type'], key)
+            else:
+              program += '\t{0} = pose__get_posreg_{1}({2}, {3})\n'.format(value['map_var'], value['type'], key, value['group'])
 
         
         #set return register
@@ -1150,10 +1152,13 @@ def create_interfaces(interfaces):
             if interface.arguments:
               arg_str = ",".join(arg_list)
               if interface.return_type.lower() in pose_types:
-                if is_groups:
-                  program += '\tpose__set_posreg_{0}({1}({2}), out_reg, out_grp)\n'.format(t_return, interface.name, arg_str)
+                if t_return == 'vector':
+                  program += '\tpose__set_vector_to_posreg({0}({1}), out_reg)\n'.format(interface.name, arg_str)
                 else:
-                  program += '\tpose__set_posreg_{0}({1}({2}), out_reg, 1)\n'.format(t_return, interface.name, arg_str)
+                  if is_groups:
+                    program += '\tpose__set_posreg_{0}({1}({2}), out_reg, out_grp)\n'.format(t_return, interface.name, arg_str)
+                  else:
+                    program += '\tpose__set_posreg_{0}({1}({2}), out_reg, 1)\n'.format(t_return, interface.name, arg_str)
               else:
                 program += '\tregisters__set_{0}(out_reg, {1}({2}))\n'.format(t_return, interface.name, arg_str)
             else:
