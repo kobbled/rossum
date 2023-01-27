@@ -267,14 +267,10 @@ def main():
     parser.add_argument('-r', '--robot-ini', type=str, dest='robot_ini',
         metavar='INI', default=ROBOT_INI_NAME,
         help="Location of {0} (default: source dir)".format(ROBOT_INI_NAME))
-    parser.add_argument('-w', '--overwrite', action='store_true', dest='overwrite',
-        help='Overwrite any build file that may exist in the build dir')
     parser.add_argument('--ftp', action='store_true', dest='server_ip',
         default= os.environ.get(ENV_SERVER_IP),
         help='send to ip address specified.'
         'This will override env variable, {0}.'.format(ENV_SERVER_IP))
-    parser.add_argument('-o', '--override', action='store_true', dest='override_ini',
-        help='override robot.ini file directories with specified paths')
     parser.add_argument('-b', '--buildall', action='store_true', dest='buildall',
         help='build all objects source space depends on.')
     parser.add_argument('-g', '--keepgpp', action='store_true', dest='keepgpp',
@@ -576,15 +572,14 @@ def main():
     #tpp env file
     configs['env'] = ''
 
-    # update struct if not using robot.ini presets
-    if args.override_ini:
-        configs['support'] = robot_ini_info.support
-        # set core version
-        configs['version'] = robot_ini_info.version
-        # set ip address to upload files to
-        configs['ftp'] = robot_ini_info.ftp
-        #tpp env
-        configs['env'] = robot_ini_info.env
+    # get info from robot.ini file
+    configs['support'] = robot_ini_info.support
+    # set core version
+    configs['version'] = robot_ini_info.version
+    # set ip address to upload files to
+    configs['ftp'] = robot_ini_info.ftp
+    #tpp env
+    configs['env'] = robot_ini_info.env
 
 
     # populate dicts & lists needed by template
@@ -616,13 +611,6 @@ def main():
     copy_karel = ''
     if args.translate_only:
         copy_karel = '-E'
-
-    # don't overwrite existing files, unless instructed to do so
-    if (not args.overwrite) and os.path.exists(build_file_path):
-        logger.fatal("Existing {0} detected and '--overwrite' not specified. "
-            "Aborting".format(BUILD_FILE_NAME))
-        # TODO: find appropriate exit code
-        sys.exit(_OS_EX_DATAERR)
 
     #store globals in container to be passed by empy
     globls = {
