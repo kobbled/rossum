@@ -1068,7 +1068,7 @@ def create_interfaces(interfaces):
         
         # load applicable tpe interfaces
         if interface.return_type or interface.arguments:
-          program += "%include tpe.klh\n"
+          program += "%include tpe.vars.klh\n"
         
         #use set to remove duplicates
         load_funcs = set()
