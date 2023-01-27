@@ -1211,16 +1211,17 @@ def gen_obj_mappings(pkgs, mappings, args, dep_graph):
             pkg.objects.append((src, obj, build, typ))
 
         # add interfaces to mappings
-        if (args.build_interface) and any(pkg.manifest.name in x.name for x in dep_graph.root):
-          for src in pkg.manifest.interface_files:
-            src = src.replace('/', '\\')
-            for (k, v) in mappings.items():
-                if '.' + v['from_suffix'] in src:
-                    obj = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['interp_suffix'])
-                    build = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['comp_suffix'])
-                    typ = 'interface'
-            logger.debug("    adding: {} -> {}".format(src, obj))
-            pkg.objects.append((src, obj, build, typ))
+        if (args.build_interface):
+          if args.buildall or any(pkg.manifest.name in x.name for x in dep_graph.root):
+            for src in pkg.manifest.interface_files:
+              src = src.replace('/', '\\')
+              for (k, v) in mappings.items():
+                  if '.' + v['from_suffix'] in src:
+                      obj = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['interp_suffix'])
+                      build = '{}.{}'.format(os.path.splitext(os.path.basename(src))[0], v['comp_suffix'])
+                      typ = 'interface'
+              logger.debug("    adding: {} -> {}".format(src, obj))
+              pkg.objects.append((src, obj, build, typ))
 
         # add tests to mappings
         if (args.inc_tests) and any(pkg.manifest.name in x.name for x in dep_graph.root):
