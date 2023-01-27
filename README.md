@@ -131,18 +131,18 @@ kpush --delete
   rossum --clean
 ```
 
-**use robot.ini version, and ip address**
+**build source files from package.json**
 
 ```
   cd C:\foo\bar\build
-  rossum C:\foo\bar\src -o
+  rossum C:\foo\bar\src -s
 ```
 
-**output test files from package.json**
+**output test files with source files from package.json**
 
 ```
   cd C:\foo\bar\build
-  rossum C:\foo\bar\src -t
+  rossum C:\foo\bar\src -t -s
 ```
 
 **build programs to interface karel routines in TP programs**
@@ -169,14 +169,21 @@ kpush --delete
 
 ```
   cd C:\foo\bar\build
-  rossum C:\foo\bar\src -g
+  rossum C:\foo\bar\src -s -g
 ```
 
-**build all dependencies**
+**build all source files from dependencies**
 
 ```
   cd C:\foo\bar\build
-  rossum C:\foo\bar\src -b
+  rossum C:\foo\bar\src -s -b
+```
+
+**build all tp interfaces from dependencies**
+
+```
+  cd C:\foo\bar\build
+  rossum C:\foo\bar\src -i -b
 ```
 
 **build with user macro %define DEBUG**
@@ -190,7 +197,7 @@ kpush --delete
 
 ```
 usage: rossum [-h] [-v] [-V] [-q] [--rg64] [-c ID] [--support PATH] [-d]
-              [--ktrans PATH] [--ktransw PATH] [-n] [-p PATH] [-r INI] [-w]
+              [--ktrans PATH] [--ktransw PATH] [-n] [-p PATH] [-r INI] [-s]
               SRC [BUILD]
 
 Version 0.1.7
@@ -227,13 +234,10 @@ optional arguments:
                         space.
   -r INI, --robot-ini INI
                         Location of robot.ini (default: source dir)
-  -w, --overwrite       Overwrite any build file that may exist in the build
-                        dir
   --ftp                 Use IP address in environment variable 
                         'ENV_SERVER_IP' to send files in build folder to
                         Controller with 'kpush' command.
-  -o --override         Will override environment variables with contents of
-                        robot.ini file.
+  -s, --buildsource     build source files in package.json.
   -b --buildall         build all dependencies as well
   -g --keepgpp          keep gpp preprocessor output in %TEMP% folder to
                         evaluate bugs.
