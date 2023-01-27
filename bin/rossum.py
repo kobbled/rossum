@@ -271,6 +271,8 @@ def main():
         default= os.environ.get(ENV_SERVER_IP),
         help='send to ip address specified.'
         'This will override env variable, {0}.'.format(ENV_SERVER_IP))
+    parser.add_argument('-s', '--buildsource', action='store_true', dest='buildsource',
+        help='build source files in package.json.')
     parser.add_argument('-b', '--buildall', action='store_true', dest='buildall',
         help='build all objects source space depends on.')
     parser.add_argument('-g', '--keepgpp', action='store_true', dest='keepgpp',
@@ -482,7 +484,7 @@ def main():
         logger.info('  {0}'.format(p))
 
     # discover packages
-    src_space_pkgs = find_pkgs(src_space_dirs)
+    src_space_pkgs = find_pkgs(src_space_dirs, args)
     src_space_pkgs = remove_duplicates(src_space_pkgs)
     logger.info("Found {0} package(s) in source space(s):".format(len(src_space_pkgs)))
     for pkg in src_space_pkgs:
@@ -498,7 +500,7 @@ def main():
           for p in other_pkg_dirs:
               logger.debug('  {0}'.format(p))
 
-        other_pkgs.extend(find_pkgs(other_pkg_dirs))
+        other_pkgs.extend(find_pkgs(other_pkg_dirs, args))
         other_pkgs = remove_duplicates(other_pkgs)
         logger.info("Found {0} package(s) in other location(s):".format(len(other_pkgs)))
         if logger.getEffectiveLevel() == logging.DEBUG:
@@ -669,7 +671,7 @@ def find_files_recur(top_dir, pattern):
     return matches
 
 
-def parse_manifest(fpath):
+def parse_manifest(fpath, args):
     """Convert a package.json file into a RossumManifest struct
     """
     with open(fpath, 'r') as f:
@@ -691,7 +693,7 @@ def parse_manifest(fpath):
         name=mfest['project'],
         description=mfest['description'],
         version=mfest['version'],
-        source=mfest['source'] if 'source' in mfest else [],
+        source=mfest['source'] if 'source' in mfest and args.buildsource else [],
         forms=mfest['forms'] if 'forms' in mfest else [],
         tp=mfest['tp'] if 'tp' in mfest else [],
         tests=mfest['tests'] if 'tests' in mfest else [],
@@ -707,7 +709,7 @@ def parse_manifest(fpath):
         tpp_compile_env=mfest['tpp_compile_env'] if 'tpp_compile_env' in mfest else [])
 
 
-def find_pkgs(dirs):
+def find_pkgs(dirs, args):
     """find packages in package path directories, and parse package.json files 
     into RossumPackage structs.
     """
@@ -722,7 +724,7 @@ def find_pkgs(dirs):
     pkgs = []
     for manifest_file_path in manifest_file_paths:
         try:
-            manifest = parse_manifest(manifest_file_path)
+            manifest = parse_manifest(manifest_file_path, args)
             pkg = RossumPackage(
                     dependencies=[],
                     include_dirs=[],
