@@ -1130,7 +1130,11 @@ def create_interfaces(interfaces):
         
         #set arguement for group number if return type is a position
         if interface.return_type.lower() in pose_types and is_groups:
+          program += 'IF NOT tpe__parameter_exists({0}) THEN\n'.format(i)
+          program += '\tout_grp = 1\n'
+          program += 'ELSE\n'
           program += '\tout_grp = tpe__get_int_arg({})\n'.format(i)
+          program += 'ENDIF\n'
           i += 1
         
         #set return and karel routine
