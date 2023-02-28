@@ -30,6 +30,7 @@ mdel @
 @# del interfaces
 mdel @
 @[for fl in files['interface']]@
+"@(fl.replace('.pc','.vr'))" @
 "@(fl)" @
 @[end for]@
 @[end if]@
