@@ -123,3 +123,4 @@ dmypy.json
 .vscode/settings.json
 
 *.code-workspace
+*desktop.ini
