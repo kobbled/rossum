@@ -39,7 +39,6 @@ Alternatively a convenience distribution can be downloaded from https://github.c
 
 
 > [!NOTE]
->
 > On windows machines the `python` alias can be overwritten by the py launcher where python is started in the terminal with `py -3`. The batch files are written with the `python` key. To create the alias type this into powershell:
 > ```powershell
 > Set-Alias -Name python -Value "path\to\Python\Python39\python.exe"
@@ -49,7 +48,6 @@ Alternatively a convenience distribution can be downloaded from https://github.c
 
 
 > [!WARNING]
->
 > If you installed rossum with the _"install.ps1"_ script the steps in [Requirements](https://github.com/kobbled/rossum#Requirements), and [Dependencies](https://github.com/kobbled/rossum#Dependencies) are not needed. If you are trying to setup in a linux/unix environment follow the steps below.
 > 
 
@@ -74,7 +72,6 @@ set ROSSUM_SERVER_IP 127.0.0.1
 See [Environment Variables](https://github.com/kobbled/rossum#environment-variables) for more details on usage.
 
 > [!NOTE]
-> 
 > If using **TP+**, and link to you controller environment file must be placed in the _robot.ini_ like:
 > `ENV=C:\path\to\env.tpp`
 >  **!IMPORTANT** Full path to `env.tpp` must be specified. DO NOT use relative paths here.
@@ -102,7 +99,6 @@ that show how to use `rossum`.
 * FANUC Form (.ftx)
 
 > [!NOTE]
->
 >Look at the User Form example in [rossum_example_ws][], *basic_test\lib_a*. Preprocessor directives have been expanded in .utx, and .ftx files using [ktransw][]. In order to properly compile dictionary files, `ninja` might have to be run twice to first create the karel include file, and then build the accompanying karel file.
 > 
 
@@ -153,7 +149,6 @@ kpush --delete
 ```
 
 > [!NOTE]
->
 >  This option depends on the [kl-TPE](https://github.com/kobbled/kl-TPE),[kl-pose](https://github.com/kobbled/kl-pose), and [kl-registers](https://github.com/kobbled/kl-registers) packages from the [Ka-Boost](https://github.com/kobbled/Ka-Boost) libraries. If Ka-Boost is installed make sure to add theses libraries to the dependencies of the package you are build in with this option.
 > 
 
