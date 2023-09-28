@@ -379,6 +379,21 @@ def main():
     #parse robot.ini file into collection tuple 'robotiniInfo'
     robot_ini_info = parse_robotini(robot_ini_loc)
 
+    # combine env files into one file if multiple are specified
+    if robot_ini_info.env:
+        if "," in robot_ini_info.env:
+            env_file = os.path.join(build_dir, 'env.tpp')
+            
+            if os.path.exists(env_file):
+                open(env_file, 'w').close()
+                
+            with open(env_file, 'w') as outfile:
+                env_list = robot_ini_info.env.split(",")
+                for fname in env_list:
+                    with open(fname.strip()) as infile:
+                        outfile.write(infile.read())
+            robot_ini_info = robot_ini_info._replace(env=env_file)
+            
     #add base path to fanuc search paths
     search_locs = []
         
