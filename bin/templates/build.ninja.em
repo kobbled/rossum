@@ -109,6 +109,7 @@ rule tpp_tp
                $in $
                -o $out @[if len(ws.robot_ini.env) > 0]@ -e "@(ws.robot_ini.env)"@[end if]@ $ $
                @[if makeenv]@ -k "@(makeenv['name'])","@(makeenv['clear'])","@(makeenv['config'])" @[end if]@ $
+               @[if keepgpp]@ -p @[end if]@ $
                $lib_includes $
                && "@(tools['tpp']['compile'])" $out /config "@(ws.robot_ini.path)" $
                && del $out
@@ -121,6 +122,7 @@ rule tpp_ls
                $in $
                -o $out @[if len(ws.robot_ini.env) > 0]@ -e "@(ws.robot_ini.env)"@[end if]@ $ $
                @[if makeenv]@ -k "@(makeenv['name'])","@(makeenv['clear'])","@(makeenv['config'])" @[end if]@ $
+               @[if keepgpp]@ -p @[end if]@ $
                $lib_includes $
 @[end if]@
 @[end if]@
@@ -133,6 +135,13 @@ rule yaml_xml
   command = "@(tools['yaml']['path'])" $
                $in $
                $out $
+
+# .xml -> .xml
+#
+rule xml_xml
+  command = "@(tools['xml']['path'])" /y /q $
+               $in $
+               "$build_dir" $
 
 # .csv -> .csv
 #
@@ -182,6 +191,7 @@ build $build_dir\@(obj): @
 @[if '.tpp' in src and compiletp]@ tpp_tp @[end if]@ @
 @[if '.tpp' in src and not compiletp]@ tpp_ls @[end if]@ @
 @[if '.yml' in src]@ yaml_xml @[end if]@ @
+@[if '.xml' in src]@ xml_xml @[end if]@ @
 @[if '.csv' in src]@ csv_csv @[end if]@ @
 @[if '.utx' in src]@ utx_tx @[end if]@ @
 @[if '.ftx' in src]@ ftx_tx @[end if]@ @

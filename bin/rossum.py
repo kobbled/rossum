@@ -433,6 +433,7 @@ def main():
         'ktrans' : {'from_suffix' : '0', 'to_suffix' : '0', 'path' : path_lst[0], 'type' : 'karel'},
         'ktransw' : {'from_suffix' : KL_SUFFIX, 'interp_suffix' : kl_comp_ext, 'comp_suffix' : kl_comp_ext, 'path' : (args.ktransw or path_lst[1]), 'type' : 'karel'},
         'yaml' : {'from_suffix' : YAML_SUFFIX, 'interp_suffix' : XML_SUFFIX,  'comp_suffix' : XML_SUFFIX, 'path' : path_lst[4], 'type' : 'data'},
+        'xml' : {'from_suffix' : XML_SUFFIX, 'interp_suffix' : XML_SUFFIX,  'comp_suffix' : XML_SUFFIX, 'path' : 'C:\\Windows\\SysWOW64\\xcopy.exe', 'type' : 'data'},
         'csv' : {'from_suffix' : CSV_SUFFIX, 'interp_suffix' : CSV_SUFFIX,  'comp_suffix' : CSV_SUFFIX, 'path' : 'C:\\Windows\\SysWOW64\\xcopy.exe', 'type' : 'data'},
         'kcdict' : {'from_suffix' : DICT_SUFFIX, 'interp_suffix' : COMPRESSED_SUFFIX, 'comp_suffix' : COMPRESSED_SUFFIX, 'path' : path_lst[5], 'type' : 'forms'},
         'kcform' : {'from_suffix' : FORM_SUFFIX, 'interp_suffix' : COMPRESSED_SUFFIX, 'comp_suffix' : COMPRESSED_SUFFIX, 'path' : path_lst[5], 'type' : 'forms'}
