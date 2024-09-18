@@ -23,7 +23,7 @@ git clone https://github.com/kobbled/rossum --recurse-submodules
 ```
 5. Run the install file in a powershell terminal, with the optional argument specifying the path to your created venv.
 ```powershell
-. ./install.ps1 <path\to\venv>
+. ./install.ps1 <path\to\venv> <update env variables (true|false)>
 ```
 
 Alternatively a convenience distribution can be downloaded from https://github.com/kobbled/rossum/releases. Simply extract to a user specified location, and add this location to your environment `Path`.
