@@ -948,7 +948,10 @@ def get_interfaces(pkgs):
     for pkg in pkgs:
         for include in  pkg.manifest.includes:
             #get all .klh files in include directory
-            f_name = pkg.location + '\\' + include
+            if not os.path.isabs(include):
+              f_name = pkg.location + '\\' + include
+            else:
+              f_name = include
             inc_files = [f_name + "\\" + fl for fl in os.listdir(f_name) if fl.endswith(".klh")]
             for interface in pkg.manifest.interfaces:
                 found_routine = False
