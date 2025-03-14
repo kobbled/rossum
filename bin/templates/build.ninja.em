@@ -107,8 +107,8 @@ rule maketp_ls
 rule tpp_tp
   command = "@(tools['tpp']['path'])" $
                $in $
-               -o $out @[if len(ws.robot_ini.env) > 0]@ -e "@(ws.robot_ini.env)"@[end if]@ $ $
-               @[if makeenv]@ -k "@(makeenv['name'])","@(makeenv['clear'])","@(makeenv['config'])" @[end if]@ $
+               -o $out @[if len(ws.robot_ini.env) > 0]@ -e "@(ws.robot_ini.env)"@[end if]@  $
+               @[if makeenv]@ -k "@(makeenv['name']), @(makeenv['clear']), @(makeenv['config'])" @[end if]@ $
                @[if keepgpp]@ -p @[end if]@ $
                $lib_includes $
                && "@(tools['tpp']['compile'])" $out /config "@(ws.robot_ini.path)" $
@@ -120,8 +120,8 @@ rule tpp_tp
 rule tpp_ls
   command = "@(tools['tpp']['path'])" $
                $in $
-               -o $out @[if len(ws.robot_ini.env) > 0]@ -e "@(ws.robot_ini.env)"@[end if]@ $ $
-               @[if makeenv]@ -k "@(makeenv['name'])","@(makeenv['clear'])","@(makeenv['config'])" @[end if]@ $
+               -o $out @[if len(ws.robot_ini.env) > 0]@ -e "@(ws.robot_ini.env)"@[end if]@  $
+               @[if makeenv]@ -k "@(makeenv['name']), @(makeenv['clear']), @(makeenv['config'])" @[end if]@ $
                @[if keepgpp]@ -p @[end if]@ $
                $lib_includes $
 @[end if]@
