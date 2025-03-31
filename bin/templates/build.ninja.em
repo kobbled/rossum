@@ -35,7 +35,7 @@
 # Packages build by this build file:
 #
 @[for pkg in ws.pkgs]@
-#   - @pkg.manifest.name
+#   - @pkg.manifest.name.replace(" ", "_")
 @[end for]@
 #
 # Do not modify this file. Rather, regenerate it using rossum.
@@ -176,12 +176,12 @@ rule ftx_tx
 @[for pkg in ws.pkgs]@
 @# don't generate rules for packages that don't have any objects declared
 @[if len(pkg.objects) > 0]@
-### @(pkg.manifest.name) ###################
+### @(pkg.manifest.name.replace(" ", "_")) ###################
 
-@(pkg.manifest.name)_dir = @(pkg.location)
-@(pkg.manifest.name)_deps = @(str.join(' ', [d.manifest.name for d in pkg.dependencies]))
-@(pkg.manifest.name)_include_flags = @(str.join(' ', ['/I"{0}"'.format(d) for d in pkg.include_dirs]))
-@(pkg.manifest.name)_macros = @(str.join(' ', ['/D{0}'.format(d) for d in pkg.macros]))
+@(pkg.manifest.name.replace(" ", "_"))_dir = @(pkg.location)
+@(pkg.manifest.name.replace(" ", "_"))_deps = @(str.join(' ', [d.manifest.name for d in pkg.dependencies]))
+@(pkg.manifest.name.replace(" ", "_"))_include_flags = @(str.join(' ', ['/I"{0}"'.format(d) for d in pkg.include_dirs]))
+@(pkg.manifest.name.replace(" ", "_"))_macros = @(str.join(' ', ['/D{0}'.format(d) for d in pkg.macros]))
 
 @[for (src, obj, _, _) in pkg.objects]@
 build $build_dir\@(obj): @
@@ -195,10 +195,10 @@ build $build_dir\@(obj): @
 @[if '.csv' in src.lower()]@ csv_csv @[end if]@ @
 @[if '.utx' in src.lower()]@ utx_tx @[end if]@ @
 @[if '.ftx' in src.lower()]@ ftx_tx @[end if]@ @
-$@(pkg.manifest.name)_dir\@(src)
-  macros = $@(pkg.manifest.name)_macros
-  lib_includes = $@(pkg.manifest.name)_include_flags
-  description = @(pkg.manifest.name) :: @(src)
+$@(pkg.manifest.name.replace(" ", "_"))_dir\@(src)
+  macros = $@(pkg.manifest.name.replace(" ", "_"))_macros
+  lib_includes = $@(pkg.manifest.name.replace(" ", "_"))_include_flags
+  description = @(pkg.manifest.name.replace(" ", "_")) :: @(src)
 
 @[end for]@
 
