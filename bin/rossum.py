@@ -672,6 +672,8 @@ def main():
     man_list = [(obj[2], obj[3]) for pkg in ws.pkgs for obj in pkg.objects]
     write_manifest(FILE_MANIFEST, man_list, robini_info.ftp)
 
+    # write post-build updater script for tp-plus multi-file outputs
+    write_manifest_updater(build_dir)
 
     # done
     logger.info("Configuration successful, you may now run 'ninja' in the "
@@ -945,7 +947,13 @@ def resolve_includes_for_pkg(pkg, visited, args):
 def resolve_macros(pkgs, args):
     '''determine any user defined macros to pass to ktransw
     '''
+    # Generate current date stamp in format: YYYY-MM-DD
+    date_stamp = datetime.datetime.now().strftime('%Y-%m-%d')
+    
     for pkg in pkgs:
+      # Add automatic DATE_STAMP macro
+      pkg.macros.append('DATE_STAMP="{}"'.format(date_stamp))
+      
       if args.user_macros:
         pkg.macros.extend(args.user_macros)
       if len(pkg.manifest.macros):
@@ -1045,6 +1053,7 @@ def create_interfaces(interfaces):
     for interface in interfaces:
         program = "PROGRAM {0}\n" \
                   "%NOBUSYLAMP\n" \
+                  "%COMMENT = 'DATE_STAMP'\n" \
                   "%NOLOCKGROUP\n" \
                   "\n".format(interface.alias)
 
@@ -1485,6 +1494,84 @@ def write_manifest(manifest, files, ipAddress):
     #save back to yaml file
     with open(manifest, 'w') as man:
       yaml.dump(file_list, man)
+
+
+def write_manifest_updater(build_dir):
+    """Write a post-build script that updates .man_log with actual
+    tp-plus generated files (which may differ from declared outputs).
+    """
+    updater_path = os.path.join(build_dir, 'update_manifest.py')
+    updater_content = '''#!/usr/bin/env python
+import os
+import yaml
+import glob
+import time
+
+MANIFEST = '.man_log'
+
+def update_tp_outputs():
+    if not os.path.exists(MANIFEST):
+        return
+    
+    lock_path = MANIFEST + '.lock'
+    
+    # acquire lock
+    while True:
+        try:
+            lock_fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.close(lock_fd)
+            break
+        except FileExistsError:
+            time.sleep(0.05)
+    
+    try:
+        # retry loading in case of concurrent write
+        manifest = {}
+        attempts = 0
+        while attempts < 5:
+            try:
+                with open(MANIFEST, 'r') as f:
+                    manifest = yaml.safe_load(f) or {}
+                if isinstance(manifest, dict):
+                    break
+            except yaml.YAMLError:
+                pass
+            attempts += 1
+            time.sleep(0.05)
+        
+        if not isinstance(manifest, dict):
+            return
+        
+        # scan tp/test_tp sections for multi-file outputs
+        for section in ('tp', 'test_tp'):
+            if section not in manifest or not isinstance(manifest[section], dict):
+                continue
+            
+            for parent_file in list(manifest[section].keys()):
+                base_name = os.path.splitext(parent_file)[0]
+                # find all .ls/.tp files with base_name prefix (case-insensitive)
+                pattern = base_name.capitalize() + '_*.ls'
+                matches = glob.glob(pattern, recursive=False)
+                pattern_tp = base_name.capitalize() + '_*.tp'
+                matches.extend(glob.glob(pattern_tp, recursive=False))
+                
+                if matches:
+                    # update manifest with actual generated files
+                    manifest[section][parent_file] = sorted(set(matches))
+        
+        with open(MANIFEST, 'w') as f:
+            yaml.safe_dump(manifest, f)
+    finally:
+        try:
+            os.remove(lock_path)
+        except OSError:
+            pass
+
+if __name__ == '__main__':
+    update_tp_outputs()
+'''
+    with open(updater_path, 'w') as f:
+        f.write(updater_content)
 
 
 #Class to represent a graph 
