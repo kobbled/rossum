@@ -91,9 +91,20 @@ def main():
         'files'   : ftpManifest,
         'delete_only' : args.only_delete
     }
-    ftp_interp = em.Interpreter(
-            output=ftp_fl, globals=dict(globls),
-            options={em.RAW_OPT : True, em.BUFFERED_OPT : True})
+    raw_key = getattr(em, 'RAW_OPT', None) or getattr(em, 'RAW', None)
+    buf_key = getattr(em, 'BUFFERED_OPT', None) or getattr(em, 'BUFFERED', None)
+
+    empy_options = {}
+    if raw_key is not None:
+        empy_options[raw_key] = True
+    if buf_key is not None:
+        empy_options[buf_key] = True
+
+    if empy_options:
+        ftp_interp = em.Interpreter(
+                output=ftp_fl, globals=dict(globls), options=empy_options)
+    else:
+        ftp_interp = em.Interpreter(output=ftp_fl, globals=dict(globls))
     ftp_interp.file(open(template_ftp_path))
     ftp_interp.shutdown()
 
