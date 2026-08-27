@@ -54,6 +54,11 @@ FTP_ERROR_PATTERNS = (
     "426 ",
 )
 
+EXPECTED_DELETE_MISS_PATTERNS = (
+    "file not found",
+    "program does not exist",
+)
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -290,30 +295,48 @@ def render_ftp_script(ip, plan, *, delete_only):
         "cd md:\\",
     ]
 
-    add_delete_put_block(lines, "karel", plan["karel"], delete_only)
+    # Generated interfaces reference routines in their source Karel programs, so
+    # release the interfaces before releasing the source programs.  FANUC also
+    # requires each PC file to be deleted before its variable memory.
+    interface_variables = [os.path.splitext(fl)[0] + ".vr" for fl in plan["interface"]]
+    add_delete_block(lines, "interface", plan["interface"])
+    add_delete_block(lines, "interface variable", interface_variables)
+    add_delete_block(lines, "karel", plan["karel"])
     add_delete_block(lines, "karel variable", plan["karelvr"])
-    add_delete_put_block(lines, "tp", plan["tp"], delete_only)
-    add_delete_put_block(lines, "interface", plan["interface"], delete_only)
-    if plan["interface"]:
-        add_delete_block(lines, "interface variable", [os.path.splitext(fl)[0] + ".vr" for fl in plan["interface"]])
+    add_delete_block(lines, "tp", plan["tp"])
 
     if plan["forms"]:
         lines.append("cd mf2:\\")
-        add_delete_put_block(lines, "forms", plan["forms"], delete_only)
+        add_delete_block(lines, "forms", plan["forms"])
 
     if plan["data"]:
         lines.append("cd fr:\\")
-        add_delete_put_block(lines, "data", plan["data"], delete_only)
+        add_delete_block(lines, "data", plan["data"])
+
+    # Do not upload anything until every selected controller file has been
+    # deleted.  VR files are created from the PC and must never be uploaded.
+    if not delete_only:
+        if plan["karel"] or plan["interface"] or plan["tp"]:
+            lines.append("cd md:\\")
+            add_put_block(lines, plan["karel"])
+            add_put_block(lines, plan["interface"])
+            add_put_block(lines, plan["tp"])
+
+        if plan["forms"]:
+            lines.append("cd mf2:\\")
+            add_put_block(lines, plan["forms"])
+
+        if plan["data"]:
+            lines.append("cd fr:\\")
+            add_put_block(lines, plan["data"])
 
     lines.append("quit")
     return "\n".join(lines) + "\n"
 
 
-def add_delete_put_block(lines, label, files, delete_only):
-    add_delete_block(lines, label, files)
-    if files and not delete_only:
-        for filename in files:
-            lines.append("put " + quote_ftp(filename))
+def add_put_block(lines, files):
+    for filename in files:
+        lines.append("put " + quote_ftp(filename))
 
 
 def add_delete_block(lines, label, files):
@@ -343,9 +366,19 @@ def find_ftp_errors(output):
         if parsed:
             active_command, active_files = parsed
             active_index = 0
+        elif line.strip().lower().startswith("ftp>"):
+            # A new non-transfer FTP command ends the context of the preceding
+            # put/delete command.  Do not suppress its errors as delete misses.
+            active_command = None
+            active_files = []
+            active_index = 0
 
         lowered = line.lower()
         if any(pattern in lowered for pattern in FTP_ERROR_PATTERNS):
+            if is_expected_delete_miss(active_command, lowered):
+                if active_index < len(active_files) - 1:
+                    active_index += 1
+                continue
             filename = active_file(active_files, active_index)
             if filename:
                 lines.append("{}: {} ({})".format(filename, line, active_command))
@@ -356,6 +389,12 @@ def find_ftp_errors(output):
             else:
                 lines.append(line)
     return lines
+
+
+def is_expected_delete_miss(command, lowered_line):
+    return command in ("delete", "mdel") and any(
+        pattern in lowered_line for pattern in EXPECTED_DELETE_MISS_PATTERNS
+    )
 
 
 def parse_ftp_command(line):

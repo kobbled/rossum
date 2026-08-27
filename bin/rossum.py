@@ -1022,6 +1022,9 @@ def summarize_ninja_failure(output, source_hint=None):
     tpplus_summary = summarize_tpplus_failure(lines, source_hint=source_hint)
     if tpplus_summary:
         return tpplus_summary
+    karel_summary = summarize_karel_failure(lines)
+    if karel_summary:
+        return karel_summary
 
     interesting = []
     capture = False
@@ -1033,6 +1036,169 @@ def summarize_ninja_failure(output, source_hint=None):
         if capture and len(interesting) >= 20:
             break
     return '\n'.join(interesting) if interesting else output[-4000:]
+
+
+def summarize_karel_failure(lines):
+    source = None
+    line_no = None
+    code_line = None
+    code_column_start = 0
+    pointer_line = None
+    error_text = None
+    raw_compiler_line = None
+
+    for index, raw_line in enumerate(lines):
+        line = clean_report_line(raw_line)
+        match = re.search(r'([A-Za-z]:.+?\.kl)\(([0-9]+)\)', line, re.IGNORECASE)
+        if not match:
+            continue
+
+        source = match.group(1)
+        line_no = int(match.group(2))
+        for follow in lines[index + 1:index + 12]:
+            clean = clean_report_line(follow)
+            code_match = re.match(r'^\s*[0-9]+\s+(.+)$', clean)
+            if code_match and code_line is None:
+                code_line = code_match.group(1).rstrip()
+                code_column_start = code_match.start(1)
+                continue
+            caret_match = re.search(r'\^\s*ERROR(?:\s*(.*))?$', clean, re.IGNORECASE)
+            if caret_match:
+                pointer_line = karel_pointer_line(clean, code_column_start)
+                error_text = (caret_match.group(1) or '').strip()
+                raw_compiler_line = clean.strip()
+                break
+        break
+
+    if not source or not line_no:
+        return None
+
+    symbol = likely_karel_symbol(code_line)
+    rows = ['[bold red]KAREL compiler error[/bold red]']
+    rows.append('[cyan]Source:[/cyan] {}'.format(display_path(source)))
+    rows.append('[cyan]Line:[/cyan] {}'.format(line_no))
+    if symbol:
+        rows.append('[cyan]Near:[/cyan] {}'.format(symbol))
+    if error_text:
+        rows.append('[cyan]Message:[/cyan] {}'.format(error_text))
+    else:
+        rows.append('[cyan]Message:[/cyan] ktrans reported an error at this location.')
+    if code_line:
+        rows.append('')
+        rows.append('[cyan]Exact location:[/cyan]')
+        rows.append('{:>5}: {}'.format(line_no, code_line))
+        if pointer_line:
+            rows.append('       {}'.format(pointer_line))
+    source_detail = karel_source_context(source, line_no, code_line=code_line)
+    if source_detail:
+        rows.append('')
+        rows.append(source_detail)
+    rows.append('')
+    rows.append('[yellow]Hint:[/yellow] {}'.format(karel_original_hint(raw_compiler_line, error_text)))
+    return '\n'.join(rows)
+
+
+def karel_pointer_line(caret_line, code_match_start=None):
+    caret_index = caret_line.find('^')
+    if caret_index < 0:
+        return None
+    base = code_match_start or 0
+    return '{}^ ERROR'.format(' ' * max(0, caret_index - base))
+
+
+def karel_source_context(source_path, line_no, radius=3, code_line=None):
+    if not source_path or not os.path.exists(source_path):
+        return None
+    try:
+        with open(source_path, 'r', encoding='utf-8', errors='replace') as handle:
+            lines = handle.readlines()
+    except OSError:
+        return None
+    if line_no < 1 or line_no > len(lines):
+        matches = find_matching_source_lines(lines, code_line)
+        out = ['[cyan]Source context:[/cyan]']
+        out.append('  Compiler reported line {}, but the current source has {} line(s).'.format(line_no, len(lines)))
+        if matches:
+            out.append('  Matching statement found at source line(s): {}'.format(', '.join(str(item) for item in matches[:8])))
+            if len(matches) == 1:
+                out.append('')
+                out.append(karel_context_at_line(lines, matches[0], radius))
+            else:
+                out.append('  Multiple matches exist; use the compiler line and matching statement to choose the right one.')
+        else:
+            out.append('  No exact matching statement was found. The error may be from a generated/preprocessed KAREL file.')
+        return '\n'.join(out)
+
+    return '[cyan]Source context:[/cyan]\n' + karel_context_at_line(lines, line_no, radius)
+
+
+def karel_context_at_line(lines, line_no, radius=3):
+    start = max(1, line_no - radius)
+    end = min(len(lines), line_no + radius)
+    out = []
+    routine = nearest_karel_routine(lines, line_no)
+    if routine:
+        out.append('  Routine: {}'.format(routine))
+    for idx in range(start, end + 1):
+        marker = '>' if idx == line_no else ' '
+        out.append('{} {:4d}: {}'.format(marker, idx, lines[idx - 1].rstrip()))
+    return '\n'.join(out)
+
+
+def find_matching_source_lines(lines, code_line):
+    if not code_line:
+        return []
+    target = normalize_karel_statement(code_line)
+    matches = []
+    for idx, line in enumerate(lines, start=1):
+        if normalize_karel_statement(line) == target:
+            matches.append(idx)
+    return matches
+
+
+def normalize_karel_statement(line):
+    return re.sub(r'\s+', ' ', str(line).strip()).lower()
+
+
+def nearest_karel_routine(lines, line_no):
+    for idx in range(min(line_no, len(lines)), 0, -1):
+        match = re.match(r'\s*ROUTINE\s+([A-Za-z_][A-Za-z0-9_]*)', lines[idx - 1], re.IGNORECASE)
+        if match:
+            return match.group(1)
+    return None
+
+
+KAREL_KEYWORDS = {
+    'abort', 'and', 'array', 'begin', 'boolean', 'by', 'case', 'const',
+    'continue', 'do', 'else', 'endif', 'endfor', 'endroutine', 'endselect',
+    'endwhile', 'false', 'for', 'from', 'if', 'in', 'integer', 'not',
+    'of', 'or', 'program', 'real', 'return', 'routine', 'select', 'string',
+    'then', 'to', 'true', 'type', 'until', 'var', 'while', 'xor',
+}
+
+
+def likely_karel_symbol(code_line):
+    if not code_line:
+        return None
+    identifiers = re.findall(r'\b[A-Za-z_][A-Za-z0-9_]*\b', code_line)
+    identifiers = [item for item in identifiers if item.lower() not in KAREL_KEYWORDS]
+    if not identifiers:
+        return None
+    if '=' in code_line:
+        rhs = code_line.split('=', 1)[1]
+        rhs_identifiers = re.findall(r'\b[A-Za-z_][A-Za-z0-9_]*\b', rhs)
+        rhs_identifiers = [item for item in rhs_identifiers if item.lower() not in KAREL_KEYWORDS]
+        if rhs_identifiers:
+            return rhs_identifiers[0]
+    return identifiers[-1]
+
+
+def karel_original_hint(raw_compiler_line=None, error_text=None):
+    if error_text:
+        return 'ktrans reported: {}'.format(error_text)
+    if raw_compiler_line:
+        return 'ktrans reported: `{}`. No more specific compiler message was provided.'.format(raw_compiler_line)
+    return 'ktrans did not provide a more specific compiler message. Use the exact location and source context above.'
 
 
 def summarize_tpplus_failure(lines, source_hint=None):
@@ -1105,6 +1271,17 @@ def clean_report_line(line):
     stripped = line.strip()
     if stripped.startswith('|') and stripped.endswith('|'):
         return stripped[1:-1].strip()
+    if stripped.startswith('│') and stripped.endswith('│'):
+        return stripped[1:-1].strip()
+    border_chars = ('|', '│', 'â', '”', '“', '‚', '„', 'ā')
+    while stripped and stripped[0] in border_chars:
+        stripped = stripped[1:]
+    if stripped.startswith(' '):
+        stripped = stripped[1:]
+    while stripped and stripped[-1] in border_chars:
+        stripped = stripped[:-1]
+    if stripped.endswith(' '):
+        stripped = stripped[:-1]
     return stripped
 
 
