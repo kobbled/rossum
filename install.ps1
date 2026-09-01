@@ -7,7 +7,7 @@ function ktransw_install {
     Write-Output "Installing ktransw ..."
 
     # Install Python dependencies
-    pip3 install -r .\deps\ktransw\requirements.txt
+    python -m pip install -r .\deps\ktransw\requirements.txt
 
     # Add ktransw to PATH
     if ($SetEnvVariables) {
@@ -38,7 +38,7 @@ function rossum_install {
     Write-Output "Installing rossum ..."
 
     # Install Python dependencies
-    pip3 install -r requirements.txt
+    python -m pip install -r requirements.txt
 
     # Add rossum to PATH
     if ($SetEnvVariables) {
