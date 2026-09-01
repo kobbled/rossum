@@ -80,6 +80,20 @@ Windows FTP does not always return precise error codes. Rossum therefore checks
 the FTP output for common controller/network failure messages and reports the
 matching lines with the full log path.
 
+## Cleaning
+
+Run clean only from the generated build directory:
+
+```powershell
+cd .\build
+rossum --clean
+```
+
+Rossum refuses to clean when the current directory is not the clean target,
+when the directory is not named `build`, or when `build.ninja` is missing.
+`rossum --clean --force` overrides those checks and should only be used after
+verifying the target directory.
+
 ## kunit
 
 `kunit` now sends the robot HTTP request directly instead of shelling out to

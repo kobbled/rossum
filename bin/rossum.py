@@ -314,6 +314,8 @@ def main():
         help='include ls files for building')
     parser.add_argument('--clean', action='store_true', dest='rossum_clean',
         help='clean all files out of build directory')
+    parser.add_argument('--force', action='store_true', dest='force_clean',
+        help="allow --clean outside a Rossum directory named 'build'")
     parser.add_argument('--update-manifest', type=str, dest='update_manifest_dir',
         metavar='BUILD', help=argparse.SUPPRESS)
     parser.add_argument('src_dir', type=str, nargs='?', metavar='SRC',
@@ -328,6 +330,9 @@ def main():
     if '--run-tpp' in sys.argv:
         sys.exit(run_tpp_from_argv(sys.argv[1:]))
     args = parser.parse_args()
+
+    if args.force_clean and not args.rossum_clean:
+        parser.error('--force can only be used with --clean')
 
     if args.update_manifest_dir:
         manifest_build_dir = os.path.abspath(args.update_manifest_dir)
@@ -357,14 +362,7 @@ def main():
     #clean out files
     # (ref): https://stackoverflow.com/questions/185936/how-to-delete-the-contents-of-a-folder
     if args.rossum_clean:
-      # make sure folder has build.ninja file or do not delete
-      file_list = os.listdir(build_dir)
-      if not any('build.ninja' in s for s in file_list):
-        raise CliError(
-            'Refusing to clean this directory',
-            detail='No build.ninja was found in:\n  {}'.format(build_dir),
-            hints=['Run rossum --clean from a Rossum build directory.'],
-        )
+      validate_clean_target(build_dir, os.getcwd(), force=args.force_clean)
 
       files_cleaned = 0
       dirs_cleaned = 0
@@ -1526,7 +1524,53 @@ def print_config_summary(console, args, source_dir, build_dir, robot_ini_loc, bu
 
 
 def is_rossum_build_dir(path):
-    return os.path.exists(os.path.join(os.path.abspath(path), BUILD_FILE_NAME))
+    return os.path.isfile(os.path.join(os.path.abspath(path), BUILD_FILE_NAME))
+
+
+def validate_clean_target(build_dir, current_dir, force=False):
+    build_dir = os.path.realpath(os.path.abspath(build_dir))
+    current_dir = os.path.realpath(os.path.abspath(current_dir))
+
+    if not os.path.isdir(build_dir):
+        raise CliError(
+            'Refusing to clean this directory',
+            detail='The clean target does not exist or is not a directory:\n  {}'.format(build_dir),
+        )
+
+    if force:
+        return build_dir
+
+    if os.path.normcase(current_dir) != os.path.normcase(build_dir):
+        raise CliError(
+            'Refusing to clean from outside the build directory',
+            detail='Current directory:\n  {}\nClean target:\n  {}'.format(current_dir, build_dir),
+            hints=[
+                'Change to the build directory and run rossum --clean.',
+                'Use rossum --clean --force only when you have verified the clean target.',
+            ],
+        )
+
+    if os.path.basename(os.path.normpath(build_dir)).lower() != 'build':
+        raise CliError(
+            "Refusing to clean a directory not named 'build'",
+            detail='Current directory:\n  {}'.format(build_dir),
+            hints=[
+                "Change to the project's build directory and run rossum --clean.",
+                'Use rossum --clean --force only when you have verified the current directory.',
+            ],
+        )
+
+    if not is_rossum_build_dir(build_dir):
+        raise CliError(
+            'Refusing to clean this directory',
+            detail='No {} was found in:\n  {}'.format(BUILD_FILE_NAME, build_dir),
+            hints=[
+                'Run rossum --clean from a Rossum build directory.',
+                'Use rossum --clean --force only when you have verified the current directory.',
+            ],
+        )
+
+    return build_dir
 
 
 def infer_source_dir(build_dir):
