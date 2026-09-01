@@ -3,6 +3,9 @@
 This is `rossum`, a CMake-like build file generator for Fanuc Robotics (Karel)
 projects.
 
+See [MODERN_CLI.md](MODERN_CLI.md) for the simple workflow and troubleshooting
+reference.
+
 
 ## Overview
 
@@ -130,6 +133,10 @@ kpush --delete
   rossum --clean
 ```
 
+For safety, `rossum --clean` only runs when the current directory is named
+`build` and contains `build.ninja`. Use `rossum --clean --force` only when you
+have verified the directory and intentionally need to override that protection.
+
 **build source files from package.json**
 
 ```
@@ -248,6 +255,7 @@ optional arguments:
                         This is needed to use karel routines within a tp program
   -D  /D                Define user macros from command line
   --clean               clean all files out of build directory
+  --force               allow --clean outside a Rossum directory named 'build'
 ```
 
 ## robot.ini file example
