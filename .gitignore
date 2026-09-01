@@ -124,3 +124,5 @@ dmypy.json
 
 *.code-workspace
 *desktop.ini
+
+.claude/

@@ -739,9 +739,21 @@ def main():
     }
     # write out ninja template
     ninja_fl = open(build_file_path, 'w')
-    ninja_interp = em.Interpreter(
-            output=ninja_fl, globals=dict(globls),
-            options={em.RAW_OPT : True, em.BUFFERED_OPT : True})
+    # EmPy exposes option constants under slightly different names across versions.
+    # Try common names and fall back to no options if none are present.
+    raw_key = getattr(em, 'RAW_OPT', None) or getattr(em, 'RAW', None)
+    buf_key = getattr(em, 'BUFFERED_OPT', None) or getattr(em, 'BUFFERED', None)
+
+    empy_options = {}
+    if raw_key is not None:
+        empy_options[raw_key] = True
+    if buf_key is not None:
+        empy_options[buf_key] = True
+
+    if empy_options:
+        ninja_interp = em.Interpreter(output=ninja_fl, globals=dict(globls), options=empy_options)
+    else:
+        ninja_interp = em.Interpreter(output=ninja_fl, globals=dict(globls))
     # load and process the template
     logger.debug("Processing template")
     ninja_interp.file(open(template_path))
