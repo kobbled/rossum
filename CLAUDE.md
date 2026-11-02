@@ -1,120 +1,114 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Project overview
 
-## Project Overview
+Rossum generates Ninja build files for FANUC KAREL projects. A source space contains packages (directories with `p*.json` manifests); Rossum configures an out-of-source build directory, then Ninja produces the controller artifacts.
 
-**Rossum** is a CMake-like build file generator for FANUC Robotics (Karel) projects. It implements a package-based workflow that generates Ninja build files from JSON package manifests, supporting out-of-source builds.
-
-## Build & Development Commands
+The command-line workflow is deliberately small:
 
 ```powershell
-# Install dependencies (from repo root)
-pip install -r requirements.txt
-
-# Standard build workflow
-mkdir C:\project\build
-cd C:\project\build
-rossum C:\project\src    # Generate build.ninja
-ninja                    # Execute build
-kpush                    # Transfer files to controller
-
-# Common rossum options
-rossum <src> -s          # Build source files from package.json
-rossum <src> -t -s       # Include test files
-rossum <src> -i          # Build TP interfaces for Karel routines
-rossum <src> -b          # Build all dependencies
-rossum <src> -g          # Keep preprocessor output for debugging
-rossum <src> -DDEBUG=TRUE  # Define preprocessor macro
-rossum --clean           # Clean build directory
-
-# Transfer files to controller
-kpush                    # Push built files via FTP
-kpush --delete           # Delete files from controller
+# From an existing build directory.
+rossum .. -l -nn   # Configure TP/LS outputs and build them.
+kpush              # Upload the generated outputs.
+kunit              # Run KUnit programs, if configured.
 ```
+
+Use `-s` for KAREL source, `-t` for tests, `-i` for generated TP interfaces, `-f` for forms, and `-b` to build dependency objects as well. `-l` includes the manifest's LS/TP files. Modes can be combined:
+
+```powershell
+rossum .. -s -l -t -i -f -nn
+```
+
+## Modern CLI
+
+Run `rossum` with no arguments from a valid build directory to open the interactive shell. The same shell is available explicitly with `rossum --shell [SRC] [BUILD]`.
+
+```text
+/status
+/config [tp|tests|source|all]
+/build [tp|tests|source|all]
+/send [--dry|--only tp|--skip data]
+/test [--list|program]
+/clean
+/check [tools|manifest|robot]
+/log [build|send|test]
+/exit
+```
+
+For automation, use the non-interactive commands:
+
+```powershell
+rossum build .\build -j 4               # Ninja with Rossum error summaries
+rossum manifest check .\build           # Check .man_log against local outputs
+rossum timings .\build --top 12         # Show slow Ninja edges
+rossum doctor .\src --build-dir .\build # Check tools, robot.ini, and paths
+```
+
+`rossum <SRC> <BUILD> -nn` configures and invokes Ninja in one command. Use `--ninja-target TARGET` (repeatable) and `--ninja-jobs N` to control that Ninja invocation. `-nn`, `-N`, and `--ninja` are equivalent; `-n` continues to mean `--no-env`.
+
+### Clean safety
+
+`rossum --clean` must be run from the target build directory. It refuses to clean unless that directory is named `build` and contains `build.ninja`; items are sent to the recycle bin. `--force` is valid only with `--clean` and overrides those guards, so use it only after verifying the target:
+
+```powershell
+cd .\build
+rossum --clean
+```
+
+### Upload and test commands
+
+`kpush` reads `.man_log`, validates the selected local files, writes `ftp.txt`, runs Windows FTP, and saves its output as `ftp.log` in the build directory. Start with a no-transfer check when diagnosing deployment:
+
+```powershell
+kpush --check
+kpush --dry-run
+kpush --only karel,tp
+kpush --skip data --script-only
+kpush --delete
+```
+
+Available deployment groups are `karel`, `tp`, `forms`, `data`, and `interface`. `--ip ADDRESS`, `--build-dir PATH`, `--manifest PATH`, and `--timeout SECONDS` support automation and overrides.
+
+`kunit` calls the robot HTTP endpoint directly and saves the response as `kunit.log` in the build directory:
+
+```powershell
+kunit --dry-run
+kunit --program TEST_ONE --program TEST_TWO
+```
+
+Use `--ip`, `--build-dir`, and `--timeout` when the defaults from `.man_log` are not appropriate.
 
 ## Architecture
 
-### Pipeline Flow
-
-```
-Source Directory (packages with p*.json manifests)
-    ↓
-Package Discovery (find_pkgs)
-    ↓
-Manifest Parsing (parse_manifest → RossumManifest)
-    ↓
-Dependency Graph Resolution (create_dependency_graph)
-    ↓
-Include Path Resolution (resolve_includes)
-    ↓
-Macro Processing (resolve_macros)
-    ↓
-EmPy Template Generation (build.ninja.em)
-    ↓
-Ninja Build File Output (build.ninja)
+```text
+Package manifests -> package discovery -> dependency/include/macro resolution
+                  -> build.ninja and .man_log -> Ninja -> kpush / kunit
 ```
 
-### Key Files
+- `bin/rossum.py` is the configuration tool, modern subcommands, interactive shell, manifest maintenance, and Ninja diagnostics.
+- `bin/rossum_cli.py` provides the shared console, subprocess, and error UI.
+- `bin/kpush.py` builds and executes validated FTP deployment plans.
+- `bin/kunit.py` runs KUnit requests through the controller HTTP endpoint.
+- `bin/templates/build.ninja.em` renders generated Ninja rules.
 
-- `bin/rossum.py` - Main orchestrator (~1,600 lines), handles entire build pipeline
-- `bin/kpush.py` - FTP wrapper for transferring compiled files to FANUC controller
-- `bin/kunit.py` - Unit test runner via controller HTTP API
-- `bin/templates/build.ninja.em` - EmPy template for Ninja build file generation
-- `bin/templates/ftp.txt.em` - EmPy template for FTP transfer scripts
+## Development
 
-### Data Structures (namedtuples in rossum.py)
-
-- `RossumManifest` - Parsed package.json contents
-- `RossumPackage` - Package with dependencies, includes, and object files
-- `RossumWorkspace` - Build/source spaces and packages
-- `robotiniInfo` - Parsed robot.ini configuration
-- `KtransInfo` - Karel compiler tools location
-- `Graph` - Dependency graph (lines 1491-1582)
-
-### Git Submodules
-
-- `deps/ktransw` - Karel translator wrapper (ktransw.py)
-- `deps/yamljson2xml` - YAML/JSON to XML converter for controller
-
-## Configuration Files
-
-### robot.ini (project root)
-Generated via `setrobot` command. Add `Ftp` and `Env` fields manually:
-```ini
-[WinOLPC_Util]
-Robot=\path\to\workcell
-Version=V9.10-1
-Path=C:\Program Files (x86)\FANUC\WinOLPC\Versions\V910-1\bin
-Support=\path\to\support
-Output=\path\to\output
-Ftp=127.0.0.1
-Env=C:\path\to\env.tpp
+```powershell
+pip install -r requirements.txt
+python -m unittest discover -s tests
+python bin\rossum.py --help
+python bin\kpush.py --help
+python bin\kunit.py --help
 ```
 
-### package.json (in each package directory)
-Manifest file with fields: `manver`, `project`, `version`, `source`, `includes`, `depends`, `tp`, `tests`, `tests-depends`, `tp-interfaces`, `macros`, `tpp_compile_env`
+Keep generated artifacts out of source package directories. When changing CLI behaviour, keep `README.md` and `MODERN_CLI.md` aligned with the actual `--help` output.
 
-## Environment Variables
+## Configuration
 
-- `ROSSUM_CORE_VERSION` - Default Karel core version (e.g., `V910-1`)
-- `ROSSUM_PKG_PATH` - Search paths for dependency packages (semicolon-separated)
-- `ROSSUM_SERVER_IP` - Default controller IP for FTP transfers
+`robot.ini` is normally in the source root and is created with `setrobot`. Rossum additionally uses `Ftp` for controller address and `Env` for the absolute TP+ environment-file path.
 
-## Supported File Types
+Important environment variables:
 
-| Extension | Type | Compiled To |
-|-----------|------|-------------|
-| `.kl` | Karel source | `.pc` (p-code) |
-| `.ls` | TP list | Direct use |
-| `.tpp` | TP-Plus | `.tp` or `.ls` |
-| `.utx` | Dictionary | `.tx` |
-| `.ftx` | Form | `.tx` |
-| `.json`, `.yaml`, `.csv` | Data | `.xml` via yamljson2xml |
-
-## Key Implementation Details
-
-- `BUILD_STANDALONE` flag in rossum.py switches between script mode (`.cmd` wrappers) and exe mode (`.exe` tools)
-- Package manifests are matched with glob pattern `p*.json` (e.g., `package.json`, `pkg.json`)
-- EmPy 3.3.4 is pinned due to compatibility (recent fix for EmPy 4.2)
-- Paths with spaces in folder names require special handling in ninja manifests
+- `ROSSUM_CORE_VERSION`: default FANUC support/core version.
+- `ROSSUM_PKG_PATH`: semicolon-separated dependency package roots.
+- `ROSSUM_SERVER_IP`: default FTP controller address.

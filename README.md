@@ -1,459 +1,175 @@
 # rossum
 
-This is `rossum`, a CMake-like build file generator for Fanuc Robotics (Karel)
-projects.
+`rossum` is a CMake-like Ninja build-file generator for FANUC Robotics KAREL projects. Projects are package-based: each package declares sources, dependencies, and optional TP, test, interface, form, and data targets in `package.json`.
 
-See [MODERN_CLI.md](MODERN_CLI.md) for the simple workflow and troubleshooting
-reference.
+See [MODERN_CLI.md](MODERN_CLI.md) for the complete modern command-line workflow and troubleshooting reference.
 
+## Quick start
 
-## Overview
+Rossum requires an out-of-source build directory. From the build directory, configure the source tree and build it:
 
-This tool introduces a package based workflow for Karel development: packages are directories that contain a marker file (a *manifest*) that contains some metadata describing the dependencies of that package and any translatable targets. Detection of packages and generation of the build file is done once at configuration time, relying on the build tool's dependency resolution to build all targets in the correct order.
+```powershell
+mkdir C:\work\build
+cd C:\work\build
+rossum .. -l -nn
+```
 
+`-l` includes the package's LS/TP files and `-nn` runs Ninja immediately after configuration. The normal deployment and test sequence is:
+
+```powershell
+kpush
+kunit
+```
+
+For a complete build configuration, use the flags needed for your package:
+
+```powershell
+rossum .. -s -l -t -i -f -nn
+```
+
+- `-s`, `--buildsource`: KAREL source from manifests.
+- `-l`, `--build-tp`: LS/TP files from manifests.
+- `-t`, `--include-tests`: test programs and test dependencies.
+- `-i`, `--build-interfaces`: generated TP interfaces for KAREL routines.
+- `-f`, `--build-forms`: FANUC forms.
+- `-b`, `--buildall`: build dependency objects as well.
+- `-tp`, `--compiletp`: compile TP+ output to `.tp`; otherwise retain interpreted output.
+- `-DNAME=VALUE`: define a preprocessor macro.
+- `-o`, `--preserve-build-paths`: retain package-relative output paths.
+
+`rossum <SRC> <BUILD> --ninja` is the long-form equivalent of `-nn`; use `--ninja-target TARGET` (repeatable) and `--ninja-jobs N` to control that invocation. `-n` means `--no-env`; it does not run Ninja.
+
+## Modern CLI
+
+Run `rossum` without arguments in a valid build directory to open the interactive build console. You can also open it explicitly with `rossum --shell [SRC] [BUILD]`.
+
+```text
+/status
+/config [tp|tests|source|all]
+/build [tp|tests|source|all]
+/send [--dry|--only tp|--skip data]
+/test [--list|program]
+/clean
+/check [tools|manifest|robot]
+/log [build|send|test]
+/exit
+```
+
+The non-interactive equivalents are suitable for scripts and CI:
+
+```powershell
+rossum build .\build -j 4
+rossum manifest check .\build
+rossum timings .\build --top 12
+rossum doctor .\src --build-dir .\build
+```
+
+`rossum build` wraps Ninja with clearer Rossum failure reporting. `manifest check` finds manifest entries whose generated files are missing; `timings` summarizes `.ninja_log`; and `doctor` checks paths, `robot.ini`, package locations, and expected build files.
+
+### Uploading with kpush
+
+`kpush` validates `.man_log` and the selected local files, writes `ftp.txt`, runs Windows FTP, and saves FTP output to `<build>\ftp.log`.
+
+```powershell
+kpush --check                 # Validate only
+kpush --dry-run               # Show the deployment plan
+kpush --only karel,tp         # Limit selected groups
+kpush --skip data --script-only
+kpush --delete                # Delete manifest files from the controller
+```
+
+Groups are `karel`, `tp`, `forms`, `data`, and `interface`. `--ip ADDRESS`, `--build-dir PATH`, `--manifest PATH`, and `--timeout SECONDS` override the normal values.
+
+### Running KUnit
+
+`kunit` calls the controller HTTP endpoint directly and writes its response to `<build>\kunit.log`.
+
+```powershell
+kunit --dry-run
+kunit --program TEST_ONE --program TEST_TWO
+```
+
+It also accepts `--ip`, `--build-dir`, `--manifest`, and `--timeout`.
+
+### Cleaning
+
+Clean only from the generated build directory:
+
+```powershell
+cd .\build
+rossum --clean
+```
+
+Rossum refuses to clean unless the current directory is the target, is named `build`, and contains `build.ninja`. Cleanup sends items to the recycle bin. `rossum --clean --force` overrides those safety checks and should be used only after verifying the target directory.
 
 ## Installation
 
-1. Install Git & Python
-2. (optional) Create a python virtual environment `python -m venv <name>`
-3. Install Ninja from https://github.com/ninja-build/ninja/releases. Download the `ninja-win.zip` file, and extract to a user specified directory. Make sure you add this to your environment `Path`.
-```powershell
-[Environment]::SetEnvironmentVariable("Path", $env:Path + ";" + "path\to\ninja", "User");
-```
-4. Clone the repo and submodules to a user specified directory. If using an python virtual environment this can be cloned within your venv if you so choose.
-```
-git clone https://github.com/kobbled/rossum --recurse-submodules
-```
-5. Run the install file in a powershell terminal, with the optional argument specifying the path to your created venv.
-```powershell
-. ./install.ps1 <path\to\venv> <update env variables (true|false)>
-```
+1. Install Git, Python, Ninja, and FANUC Roboguide/OLPC tooling.
+2. Clone Rossum and its submodules:
 
-Alternatively a convenience distribution can be downloaded from https://github.com/kobbled/rossum/releases. Simply extract to a user specified location, and add this location to your environment `Path`.
+   ```powershell
+   git clone https://github.com/kobbled/rossum --recurse-submodules
+   ```
+
+3. Run the installer, optionally passing a virtual-environment path:
+
+   ```powershell
+   . .\install.ps1 <path-to-venv> <update-env-variables>
+   ```
+
+Alternatively, install the Python dependencies manually and ensure `bin`, Ninja, and the required FANUC tools are on `PATH`:
 
 ```powershell
-[Environment]::SetEnvironmentVariable("Path", $env:Path + ";" + "path\to\rossum-distrib", "User");
-```
-
-
-> [!IMPORTANT]
-> make sure you add any external libraries or projects that are dependencies (such as [Ka-Boost](https://github.com/kobbled/Ka-Boost)) to the environment variable `ROSSUM_PKG_PATH`. See [Environment Variables](https://github.com/kobbled/rossum#environment-variables) for more details.
-
-
-
-> [!NOTE]
-> On windows machines the `python` alias can be overwritten by the py launcher where python is started in the terminal with `py -3`. The batch files are written with the `python` key. To create the alias type this into powershell:
-> ```powershell
-> Set-Alias -Name python -Value "path\to\Python\Python39\python.exe"
-> ```
-> replacing the value with the full path to the python executable in your PATH environment variables.
-> 
-
-
-> [!WARNING]
-> If you installed rossum with the _"install.ps1"_ script the steps in [Requirements](https://github.com/kobbled/rossum#Requirements), and [Dependencies](https://github.com/kobbled/rossum#Dependencies) are not needed. If you are trying to setup in a linux/unix environment follow the steps below.
-> 
-
-
-## Requirements
-
-* **Rossum** was written in Python 3. Python dependencies can be installed with
-```python
 pip install -r requirements.txt
 ```
-* Add the _./bin_ directory of **Rossum** to your environment `Path`
-* The generated Ninja build files require a recent (> 1.7.1) version of [Ninja][] to be present. Please install [Ninja](https://github.com/ninja-build/ninja/releases) on your machine, and make sure the binary is located on your envrionment `Path`.
-* FANUC Roboguide must also be installed with OPLC bin programs, **maketp**, **ktrans**, and **setrobot**. These tools can be typically found in `C:\Program Files (x86)\FANUC\WinOLPC\bin`. An emulation of your workcell should be made through Roboguide or OLPCpro, typically stored in *%USERPROFILE%/Documents/My Workcells*. Once a workcell has been created, and _robot.ini_ file needs to be generated in the root of your rossum project. The _robot.ini_ file can be generated by typing `setrobot` into a terminal opened in the root directory of your project, and selecting the appropriate workcell.
-* Add the following to your environment variables, and change the values according to your system
-```shell
-# Rossum specific variables
-set ROSSUM_CORE_VERSION=V910-1
-set ROSSUM_PKG_PATH \path\to\rossum\dependency\packages
-set ROSSUM_SERVER_IP 127.0.0.1
-```
 
-See [Environment Variables](https://github.com/kobbled/rossum#environment-variables) for more details on usage.
+Add dependency package roots to `ROSSUM_PKG_PATH` (semicolon-separated). The installer configures the bundled `ktransw` and `yamljson2xml` dependencies; a manual setup must make their required executables available as well.
 
-> [!NOTE]
-> If using **TP+**, and link to you controller environment file must be placed in the _robot.ini_ like:
-> `ENV=C:\path\to\env.tpp`
->
+## Configuration
 
->  [!IMPORTANT]
-> Full path to `env.tpp` must be specified. DO NOT use relative paths here.
->  
+Create `robot.ini` in the source root with `setrobot`, then add the Rossum-specific controller and TP+ environment settings when applicable:
 
-## Dependencies
-
-* [ktransw](https://github.com/kobbled/ktransw_py) must be installed on your system for Rossum to compile karel files. follow the instructions [here](https://github.com/kobbled/ktransw_py#Requirements) for installation. **ktransw** is included as a submodule of this package in _"./deps/ktransw"_. Make sure that _"./deps/ktransw/bin"_, and _"./deps/ktransw/gpp"_ are on your environment `Path`.
-* [yamljson2xml](https://github.com/kobbled/yamljson2xml) is required to convert _.yaml_. or _.json_ files to xml to be sent to the controller. Currently Fanuc cannot read or parse _.yaml_. or _.json_, but can read _.xml_ files. Follow this installation instructions [here](https://github.com/kobbled/yamljson2xml), and make sure the necessary locations are added to your environment `Path`.
-
-## Examples
-
-Please see [rossum_example_ws][] for an example workspace with some packages
-that show how to use `rossum`.
-
-## currently handled files
-
-* Karel (.kl)
-* LS files (.ls)
-* TP-Plus (.tpp)
-* JSON (.json)
-* YAML (.yaml)
-* CSV (.csv)
-* FANUC Dictionary (.utx)
-* FANUC Form (.ftx)
-
-> [!NOTE]
->Look at the User Form example in [rossum_example_ws][], *basic_test\lib_a*. Preprocessor directives have been expanded in .utx, and .ftx files using [ktransw][]. In order to properly compile dictionary files, `ninja` might have to be run twice to first create the karel include file, and then build the accompanying karel file.
-> 
-
-
-## Usage
-
-**standard**
-
-```
-  mkdir C:\foo\bar\build
-  cd C:\foo\bar\build
-  rossum C:\foo\bar\src
-  kpush
-```
-
-**delete files from build dir on robot controller**
-
-```
-kpush --delete
-```
-
-**clean out build file**
-
-```
-  cd C:\foo\bar\build
-  rossum --clean
-```
-
-For safety, `rossum --clean` only runs when the current directory is named
-`build` and contains `build.ninja`. Use `rossum --clean --force` only when you
-have verified the directory and intentionally need to override that protection.
-
-**build source files from package.json**
-
-```
-  cd C:\foo\bar\build
-  rossum C:\foo\bar\src -s
-```
-
-**output test files with source files from package.json**
-
-```
-  cd C:\foo\bar\build
-  rossum C:\foo\bar\src -t -s
-```
-
-**build programs to interface karel routines in TP programs**
-
-```
-  cd C:\foo\bar\build
-  rossum C:\foo\bar\src -i
-```
-
-> [!NOTE]
->  This option depends on the [kl-TPE](https://github.com/kobbled/kl-TPE),[kl-pose](https://github.com/kobbled/kl-pose), and [kl-registers](https://github.com/kobbled/kl-registers) packages from the [Ka-Boost](https://github.com/kobbled/Ka-Boost) libraries. If Ka-Boost is installed make sure to add theses libraries to the dependencies of the package you are build in with this option.
-> 
-
-```json
-{
-  "depends" : [
-    "registers",
-    "TPElib"
-  ]
-}
-```
-
-**keep preprocessor output in %TEMP%**
-
-```
-  cd C:\foo\bar\build
-  rossum C:\foo\bar\src -s -g
-```
-
-**build all source files from dependencies**
-
-```
-  cd C:\foo\bar\build
-  rossum C:\foo\bar\src -s -b
-```
-
-**build all tp interfaces from dependencies**
-
-```
-  cd C:\foo\bar\build
-  rossum C:\foo\bar\src -i -b
-```
-
-**build with user macro %define DEBUG**
-
-```
-  cd C:\foo\bar\build
-  rossum C:\foo\bar\src -DDEBUG=TRUE
-```
-
-**--help output**
-
-```
-usage: rossum [-h] [-v] [-V] [-q] [--rg64] [-c ID] [--support PATH] [-d]
-              [--ktrans PATH] [--ktransw PATH] [-n] [-p PATH] [-r INI] [-s]
-              SRC [BUILD]
-
-Version 0.1.7
-
-A cmake-like Makefile generator for Fanuc Robotics (Karel) projects
-that supports out-of-source builds.
-
-positional arguments:
-  SRC                   Main directory with packages to build
-  BUILD                 Directory for out-of-source builds (default: 'cwd')
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -v, --verbose         Be verbose
-  -V, --version         show program's version number and exit
-  -q, --quiet           Be quiet (only warnings and errors will be shown)
-  --rg64                Assume 64-bit Roboguide version.
-  -c ID, --core ID      Version of the core files used when translating
-                        (default: V7.70-1). Use the 'ROSSUM_CORE_VERSION'
-                        environment variable to configure an alternative
-                        default without having to specify it on each
-                        invocation of rossum.
-  --support PATH        Location of KAREL support directory (default: auto-
-                        detect based on selected core version and FANUC
-                        registry keys)
-  -d, --dry-run         Do everything except writing to build file
-  --ktrans PATH         Location of ktrans (default: auto-detect)
-  --ktransw PATH        Location of ktransw (default: assume it's on the
-                        Windows PATH)
-  -n, --no-env          Do not search the ROSSUM_PKG_PATH, even if it is set
-  -p PATH, --pkg-dir PATH
-                        Additional paths to search for packages (multiple
-                        allowed). Note: this essentially extends the source
-                        space.
-  -r INI, --robot-ini INI
-                        Location of robot.ini (default: source dir)
-  --ftp                 Use IP address in environment variable 
-                        'ENV_SERVER_IP' to send files in build folder to
-                        Controller with 'kpush' command.
-  -s, --buildsource     build source files in package.json.
-  -b --buildall         build all dependencies as well
-  -g --keepgpp          keep gpp preprocessor output in %TEMP% folder to
-                        evaluate bugs.
-  -tp --compiletp       compile .tpp files into .tp files. If false will 
-                        just interpret to .ls.
-  -t  --include-tests   include test files in build
-  -i  --build-interfaces   build tp interfaces for karel 
-                        routines specified in package.json.
-                        This is needed to use karel routines within a tp program
-  -D  /D                Define user macros from command line
-  --clean               clean all files out of build directory
-  --force               allow --clean outside a Rossum directory named 'build'
-```
-
-## robot.ini file example
-
-create robot.ini file in the top level of the source directory calling **setrobot** through a command prompt, and selecting the correct workcell created with Roboguide. *Ftp*, and *Env* will need to be added afterwards as they are Rossum specific directives.
-
-```
+```ini
 [WinOLPC_Util]
-Robot=\C\Users\<user>\Documents\My Workcells\cell\Robot_1
+Robot=\path\to\workcell
 Version=V9.10-1
 Path=C:\Program Files (x86)\FANUC\WinOLPC\Versions\V910-1\bin
-Support=C:\Users\<user>\Documents\My Workcells\cell\Robot_1\support
-Output=C:\Users\<user>\Documents\My Workcells\cell\Robot_1\output
+Support=\path\to\support
+Output=\path\to\output
 Ftp=127.0.0.1
-Env=C:\Users\<user>\Documents\My Workcells\cell\tpp\vars.tpp
+Env=C:\absolute\path\to\env.tpp
 ```
 
-## package.json file example
+`Env` must be an absolute path. Important environment variables are:
+
+- `ROSSUM_CORE_VERSION`: default KAREL core version (for example, `V910-1`).
+- `ROSSUM_PKG_PATH`: dependency package roots.
+- `ROSSUM_SERVER_IP`: default controller IP for FTP transfers.
+
+## Package manifests
+
+Packages use `package.json` (or another `p*.json` manifest) to declare build content. Common keys include `source`, `includes`, `depends`, `tp`, `tests`, `tests-depends`, `tp-interfaces`, `forms`, `macros`, and `tpp_compile_env`.
 
 ```json
 {
-  "manver" : "1",
-  "project" : "kl-lib",
-  "description" : "",
-  "version" : "0.0.2",
-  "license" : "MIT",
-  "author" : "name",
-  "source" : [
-    "src/source.kl"
-  ],
-  "includes" : [
-    "include"
-  ],
-  "depends" : [
-    "ktransw-macros",
-    "Strings",
-    "math",
-    "registers",
-    "TPElib"
-  ],
-  "tp" : [
-    "tp/move.ls"
-  ],
-  "tp-interfaces" : [
-    {"routine" : "source__func01", "program_name" : "func01"},
-    {"routine" : "source__func02", "program_name" : "func02"},
-    {"routine" : "source__func02", "program_name" : "func02", "default_params" : {"2": 1, "3": "default_string"}},
-  ],
-  "forms" : [
-    "forms/frmnmeeg.ftx"
-  ],
-  //macro commands set in programs. (for example building for debugging or production)
-  "macros" : [
-    "DEBUG=TRUE",
-    "BUILD_LOG=FALSE"
-  ],
-  //test files to build when using the -t option
-  "tests" : [
-    "test/test_source.kl"
-  ],
-  //includes needed for tests
-  "tests-includes" : [
-    "test/configs"
-  ],
-  //test dependencies
-  "tests-depends" : [
-    "display",
-    "KUnit"
-  ],
-  //Only builds TP files when -t option is specified
-  "tests-tp" : [
-    "test/tp/test_move.tpp"
-  ],
-  // This option is used to create a karel hash table from the TP+ environment file specified in robot.ini file
-  "tpp_compile_env" : {"name" : "tppenv", "clear" : false, "config" : "env"}
+  "manver": "1",
+  "project": "example-package",
+  "version": "0.0.1",
+  "source": ["src/example.kl"],
+  "includes": ["include"],
+  "depends": ["Strings"],
+  "tp": ["tp/move.ls"],
+  "tests": ["test/test_example.kl"],
+  "macros": ["DEBUG=TRUE"]
 }
 ```
 
-### tp-interfaces
+Supported source types include KAREL (`.kl`), LS/TP (`.ls`), TP+ (`.tpp`), dictionaries (`.utx`), forms (`.ftx`), and JSON/YAML/CSV controller data.
 
-Teach pendant interfaces are a way of exposing karel routines, for usage in teach pendant (TP) programs. Inherently you are not allowed to access karel routines with the *CALL* function in TP programs. You are able to call karel programs within TP programs. Rossum provides a way to automatically create a karel program wrapper around a specified routine. For instance if you want to expose a routine definition:
+## Example workspace
 
-```
-ROUTINE func01(p : XYZWPR; i : INTEGER; r : REAL) : INTEGER
-```
-
-and create a wrapper program called **tp_func01**, you can define an interface in the package manifest:
-
-```
-"tp-interfaces" : [
-    {"routine" : "func01", "program_name" : "tp_func01", "default_params" : {"2": 1, "3": 0.0}}
-  ]
-```
-
-This will output a karel program to \<src\>/tp/ . If there is a return type the last arguement will be the register number to store the result in.
-
-If an input argument is a position type, the corresponding TPE arguement is the position register number where the input data is stored.
-
-**currently handled types**
-
-* INTEGER
-* REAL
-* STRING
-* XYZWPR
-* JOINTPOS
-
-Default arguements can also be specified using the _"default_params"_ field. where the `key:value` pair is the argument number (index starting at 1), and the default value you would like to specify. 
-
-In the case for **"func01"** the 2nd integer argument will default to 1 if not included, and argument 3 will default to 0.0. There currently is no mechanism to leave argument 2 blank, but declare a value for argument 3. Therfore all subsequent arguments also have to be excluded for default arguments to work. This means that the arguments must be ordered in a manner that subsequent arguments would not need to be declared if the current argument is not specified.
- 
-### user macros
-
-package/project wide pre-processor macros can be defined either from the command line or the package manifest. From the command line macros are invoked the same way they are in GPP (see [GPP documentation][GPP]), with **-D***name=val*, or **/D***name=val*. Macros can be included in the package manifest as shown in [example package.json](#packagejson-file-example).
-
-## Environment variables
-
-```shell
-# environment pointers
-set PATH=%PATH%;C:\path\to\rossum\bin
-set PATH=%PATH%;C:\path\to\rossum\deps\ktransw\bin
-set PATH=%PATH%;C:\path\to\rossum\deps\ktransw\gpp
-set PATH=%PATH%;C:\path\to\rossum\deps\yamljson2xml\src
-```
-
-```shell
-# Rossum specific variables
-set ROSSUM_CORE_VERSION=V910-1
-set ROSSUM_PKG_PATH \path\to\rossum\dependency\packages
-set ROSSUM_SERVER_IP 127.0.0.1
-```
-
-`rossum` checks for the existence of two environment variables and uses their
-contents to change its behaviour.
-
-### ROSSUM_PKG_PATH
-
-The `ROSSUM_PKG_PATH` should contain (a) path(s) to one or more directories
-containing rossum packages. All directories will be searched when running `rossum` so that the full paths of these packages do not need to be specified, merely the _name_ of the package.
-
-For example if you have the dependency [Strings](https://github.com/kobbled/strings) on your project, you would add the location where you put the **Strings** repo (i.e. `C:\path\to\rossum\dependency\packages`) to `ROSSUM_PKG_PATH`. Then in the _package.json_ file simply add the name of the package:
-
-```
-"depends" : [
-    "Strings"
-  ],
-```
-Rossum now has visibility to the Strings package.
-
-### ROSSUM_CORE_VERSION
-
-The `ROSSUM_CORE_VERSION` variable can be used to specify a 'system wide'
-default core version that should be used for all invocations of `ktransw`,
-unless the default is overriden using the `--core` option.
-
-Example: to make version 8.30 of the support files the default set
-`ROSSUM_CORE_VERSION` to `V8.30-1`.
-
-
-## Glossary
-
-Terminology used by `rossum`.
-
-### package
-A directory containing any number of source and header files, organised into
-`src` and `include` sub directories, along with a JSON package manifest. The
-manifest declares translationable binary targets and additional meta-data such
-as build dependencies (other `rossum` packages), author, version and test
-binaries.
-
-### workspace
-A directory containing a set of `rossum` compatible packages. Note that while
-possible, packages are typically not directly stored in the top-level workspace
-directory, but in a *source space* sub directory.
-
-### source space
-The sub directory of the *workspace* that contains a set of of `rossum`
-compatible packages. Usually named `src`.
-
-### build space
-The sub directory of the *workspace* that will store all the build output
-(p-code files).
-
-### build file
-The ninja build file generated by `rossum` at the end of the configuration
-phase.
-
+See [rossum_example_ws](https://github.com/kobbled/rossum_example_ws) for a working multi-package project.
 
 ## Disclaimer
 
-WinOLPC, OlpcPRO and Roboguide are products of Fanuc America Corporation. The
-author of `rossum` is not affiliated with Fanuc in any way.
-
-
-
-[ninja]: https://ninja-build.org
-[ktransw]: https://github.com/kobbled/ktransw_py
-[EmPy]: https://pypi.python.org/pypi/EmPy
-[releases]: https://github.com/kobbled/rossum/releases
-[rossum_example_ws]: https://github.com/kobbled/rossum_example_ws
-[Installing Python on Windows]: http://docs.python-guide.org/en/latest/starting/install/win/
-[GPP]: https://files.nothingisreal.com/software/gpp/gpp.html
+WinOLPC, OLPCpro, and Roboguide are products of FANUC America Corporation. The Rossum authors are not affiliated with FANUC.
